@@ -11,9 +11,12 @@ public final class PluginConfig {
 
     public final String lobbyWorld;
     public final String eventWorld;
+    public final String parkourWorld;
 
     public final Location lobbySpawn;
     public final Location eventSpawn;
+    public final Location parkourSpawn;
+    public final Location parkourSpectatorSpawn;
 
     public final ArenaCuboid arena;
 
@@ -43,6 +46,12 @@ public final class PluginConfig {
     public final String lobbyScoreboardTitle;
     public final java.util.List<String> lobbyScoreboardLines;
     public final String lobbyHost;
+
+    public final boolean parkourScoreboardEnabled;
+    public final String parkourScoreboardTitle;
+    public final java.util.List<String> parkourScoreboardLines;
+
+    public final club.aves.anvildrop.model.ArenaCuboid parkourWall;
 
     public final String msgPrefix;
     public final String msgNoPerm;
@@ -79,9 +88,12 @@ public final class PluginConfig {
     private PluginConfig(FileConfiguration c) {
         this.lobbyWorld = c.getString("worlds.lobbyWorld", "world");
         this.eventWorld = c.getString("worlds.eventWorld", "anvildrop");
+        this.parkourWorld = c.getString("worlds.parkourWorld", "parkour");
 
         this.lobbySpawn = readSpawn(c, lobbyWorld, "spawns.lobby");
         this.eventSpawn = readSpawn(c, eventWorld, "spawns.event");
+        this.parkourSpawn = readSpawn(c, parkourWorld, "spawns.parkour");
+        this.parkourSpectatorSpawn = readSpawn(c, parkourWorld, "spawns.parkourSpectator");
 
         this.arena = readArena(c, eventWorld);
 
@@ -128,6 +140,20 @@ public final class PluginConfig {
         }
         this.lobbyScoreboardLines = lobbyLines;
         this.lobbyHost = c.getString("lobbyScoreboard.host", "Robin");
+
+        this.parkourScoreboardEnabled = c.getBoolean("parkourScoreboard.enabled", true);
+        this.parkourScoreboardTitle = c.getString("parkourScoreboard.title", "&a&lPARKOUR");
+        java.util.List<String> pkLines = c.getStringList("parkourScoreboard.lines");
+        if (pkLines == null || pkLines.isEmpty()) pkLines = java.util.List.of("&eAlive: &f{alive}");
+        this.parkourScoreboardLines = pkLines;
+
+        int wMinX = c.getInt("parkour.wall.min.x", -5);
+        int wMinY = c.getInt("parkour.wall.min.y", 70);
+        int wMinZ = c.getInt("parkour.wall.min.z", -1);
+        int wMaxX = c.getInt("parkour.wall.max.x", 5);
+        int wMaxY = c.getInt("parkour.wall.max.y", 75);
+        int wMaxZ = c.getInt("parkour.wall.max.z", -1);
+        this.parkourWall = club.aves.anvildrop.model.ArenaCuboid.normalized(parkourWorld, wMinX, wMinY, wMinZ, wMaxX, wMaxY, wMaxZ);
 
         this.msgPrefix = c.getString("messages.prefix", "&8[&6AnvilDrop&8] &r");
         this.msgNoPerm = c.getString("messages.noPerm", "&cYou don't have permission.");

@@ -3,18 +3,23 @@ package club.aves.anvildrop;
 import club.aves.anvildrop.commands.AnvilDropCommand;
 import club.aves.anvildrop.commands.DeadCommand;
 import club.aves.anvildrop.commands.DiscordCommand;
+import club.aves.anvildrop.commands.EventHelpCommand;
 import club.aves.anvildrop.commands.EventAdminCommand;
 import club.aves.anvildrop.commands.MuteChatCommand;
+import club.aves.anvildrop.commands.ParkourEventCommand;
 import club.aves.anvildrop.commands.ReviveCommand;
 import club.aves.anvildrop.commands.VoiceMuteCommand;
 import club.aves.anvildrop.chat.ChatMuteListener;
 import club.aves.anvildrop.chat.ChatMuteManager;
 import club.aves.anvildrop.config.ConfigMerge;
+import club.aves.anvildrop.config.YamlResourceMerge;
 import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.hooks.WorldEditHook;
 import club.aves.anvildrop.listeners.JoinTeleportListener;
 import club.aves.anvildrop.mods.ModRegistry;
+import club.aves.anvildrop.parkour.ParkourEventManager;
+import club.aves.anvildrop.tablist.DeadTabListManager;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.ui.EventSettingsUI;
 import org.bukkit.Bukkit;
@@ -29,6 +34,8 @@ public final class AnvilDropPlugin extends JavaPlugin {
     private EventSettingsUI eventSettingsUI;
     private DeadPermissionService deadPerms;
     private ChatMuteManager chatMute;
+    private ParkourEventManager parkourEvent;
+    private DeadTabListManager deadTab;
 
     @Override
     public void onEnable() {
@@ -37,6 +44,8 @@ public final class AnvilDropPlugin extends JavaPlugin {
         // If you update the plugin, automatically add any new missing config keys with default values.
         ConfigMerge.mergeMissingKeys(this, "config.yml");
         reloadConfig();
+        // Merge extra yaml resources
+        YamlResourceMerge.ensureAndMerge(this, "eventhelp.yml");
 
         this.modRegistry = new ModRegistry(this);
         this.deadPerms = new DeadPermissionService(this);
@@ -46,6 +55,9 @@ public final class AnvilDropPlugin extends JavaPlugin {
         this.eventManager = new AnvilDropEventManager(this, scoreboard, modRegistry, deadPerms);
         this.eventSettingsUI = new EventSettingsUI(this, eventManager, deadPerms);
         this.eventManager.setOnEventEnd(() -> eventSettingsUI.resetAll());
+        this.parkourEvent = new ParkourEventManager(this, scoreboard, eventSettingsUI);
+        this.deadTab = new DeadTabListManager(this, deadPerms);
+        this.deadTab.start();
 
         var cmd = getCommand("anvildrop");
         if (cmd != null) {
@@ -66,9 +78,14 @@ public final class AnvilDropPlugin extends JavaPlugin {
             event.setTabCompleter(executor);
         }
 
+        var eventhelp = getCommand("eventhelp");
+        if (eventhelp != null) {
+            eventhelp.setExecutor(new EventHelpCommand(this));
+        }
+
         var revive = getCommand("revive");
         if (revive != null) {
-            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry));
+            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry, parkourEvent));
         }
 
         var dead = getCommand("dead");
@@ -86,11 +103,18 @@ public final class AnvilDropPlugin extends JavaPlugin {
             voicemute.setExecutor(new VoiceMuteCommand(this));
         }
 
+        var parkour = getCommand("parkourevent");
+        if (parkour != null) {
+            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent));
+        }
+
         Bukkit.getPluginManager().registerEvents(eventManager, this);
         Bukkit.getPluginManager().registerEvents(scoreboard, this);
         Bukkit.getPluginManager().registerEvents(new JoinTeleportListener(this), this);
         Bukkit.getPluginManager().registerEvents(eventSettingsUI, this);
         Bukkit.getPluginManager().registerEvents(new ChatMuteListener(this, chatMute), this);
+        Bukkit.getPluginManager().registerEvents(parkourEvent, this);
+        Bukkit.getPluginManager().registerEvents(deadTab, this);
 
         // If the plugin is reloaded while players are already online in the event world, ensure they have the compass.
         Bukkit.getScheduler().runTask(this, () -> eventSettingsUI.initForOnlinePlayers());
@@ -113,6 +137,9 @@ public final class AnvilDropPlugin extends JavaPlugin {
         }
         if (scoreboard != null) {
             scoreboard.shutdown();
+        }
+        if (deadTab != null) {
+            deadTab.stop();
         }
     }
 }

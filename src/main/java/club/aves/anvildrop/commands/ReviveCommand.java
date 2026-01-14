@@ -4,6 +4,7 @@ import club.aves.anvildrop.config.PluginConfig;
 import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.mods.ModRegistry;
+import club.aves.anvildrop.parkour.ParkourEventManager;
 import club.aves.anvildrop.ui.EventSettingsUI;
 import club.aves.anvildrop.util.Text;
 import org.bukkit.Bukkit;
@@ -26,6 +27,7 @@ public final class ReviveCommand implements CommandExecutor {
     private final DeadPermissionService deadPerms;
     private final EventSettingsUI settingsUI;
     private final ModRegistry mods;
+    private final ParkourEventManager parkour;
 
     private static final Map<String, Long> reviveAllConfirmUntil = new HashMap<>();
 
@@ -33,12 +35,14 @@ public final class ReviveCommand implements CommandExecutor {
                         AnvilDropEventManager eventManager,
                         DeadPermissionService deadPerms,
                         EventSettingsUI settingsUI,
-                        ModRegistry mods) {
+                        ModRegistry mods,
+                        ParkourEventManager parkour) {
         this.plugin = plugin;
         this.eventManager = eventManager;
         this.deadPerms = deadPerms;
         this.settingsUI = settingsUI;
         this.mods = mods;
+        this.parkour = parkour;
     }
 
     @Override
@@ -103,6 +107,12 @@ public final class ReviveCommand implements CommandExecutor {
         }
 
         if (!deadPerms.isDead(target)) {
+            // Allow revive for parkour-eliminated players too.
+            if (parkour != null && parkour.isActive() && parkour.isEliminated(target)) {
+                parkour.reviveToStart(target);
+                sender.sendMessage(Text.color(cfg.msgPrefix + Text.replacePlaceholders(cfg.msgRevived, Map.of("player", target.getName()))));
+                return true;
+            }
             sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveNotDead));
             return true;
         }
@@ -113,8 +123,15 @@ public final class ReviveCommand implements CommandExecutor {
             eventManager.revivePlayer(target);
         }
 
-        // If an event is active, teleport back into it. Otherwise just clear dead status.
+        // If parkour is active and they're in the parkour world (or eliminated there), send them to parkour start.
         PluginConfig c = PluginConfig.load(plugin.getConfig());
+        if (parkour != null && parkour.isActive() && (target.getWorld().getName().equalsIgnoreCase(c.parkourWorld) || parkour.isEliminated(target))) {
+            parkour.reviveToStart(target);
+            sender.sendMessage(Text.color(c.msgPrefix + Text.replacePlaceholders(c.msgRevived, Map.of("player", target.getName()))));
+            return true;
+        }
+
+        // If anvil event is active, teleport back into it. Otherwise just clear dead status.
         if (eventManager.isActive()) {
             World eventWorld = Bukkit.getWorld(c.eventWorld);
             Location spawn = c.eventSpawn != null ? c.eventSpawn : (eventWorld != null ? eventWorld.getSpawnLocation() : null);

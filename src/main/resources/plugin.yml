@@ -31,6 +31,13 @@ commands:
   voicemute:
     description: Toggle voice chat speak permission for LuckPerms group default
     usage: /voicemute
+  parkourevent:
+    description: Manage the Parkour event
+    usage: /parkourevent <open|start|stop>
+    aliases: [pe]
+  eventhelp:
+    description: Show event help for your current world
+    usage: /eventhelp
 
 permissions:
   anvildrop.open:

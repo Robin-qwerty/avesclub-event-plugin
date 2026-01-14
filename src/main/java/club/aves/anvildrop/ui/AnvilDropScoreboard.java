@@ -27,14 +27,26 @@ public final class AnvilDropScoreboard implements Listener {
     private BukkitTask task;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
 
-    private volatile int aliveCount = 0;
+    private final Map<String, Integer> aliveCountsByWorld = new HashMap<>();
+    private final Map<String, Integer> timeSecondsByWorld = new HashMap<>();
 
     public AnvilDropScoreboard(Plugin plugin) {
         this.plugin = plugin;
     }
 
     public void setAliveCount(int aliveCount) {
-        this.aliveCount = Math.max(0, aliveCount);
+        PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        setAliveCountForWorld(cfg.eventWorld, aliveCount);
+    }
+
+    public void setAliveCountForWorld(String worldName, int aliveCount) {
+        if (worldName == null) return;
+        aliveCountsByWorld.put(worldName.toLowerCase(), Math.max(0, aliveCount));
+    }
+
+    public void setTimeSecondsForWorld(String worldName, int seconds) {
+        if (worldName == null) return;
+        timeSecondsByWorld.put(worldName.toLowerCase(), Math.max(0, seconds));
     }
 
     public void startUpdater() {
@@ -85,7 +97,16 @@ public final class AnvilDropScoreboard implements Listener {
         if (world.equalsIgnoreCase(cfg.eventWorld) && cfg.scoreboardEnabled) {
             List<String> raw = cfg.scoreboardLines;
             setSidebar(sb, "aves_event", Text.color(cfg.scoreboardTitle),
-                    replaceAll(raw, Map.of("alive", String.valueOf(aliveCount))));
+                    replaceAll(raw, Map.of("alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0)))));
+            return;
+        }
+
+        if (world.equalsIgnoreCase(cfg.parkourWorld) && cfg.parkourScoreboardEnabled) {
+            setSidebar(sb, "aves_parkour", Text.color(cfg.parkourScoreboardTitle),
+                    replaceAll(cfg.parkourScoreboardLines, Map.of(
+                            "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0))
+                    )));
             return;
         }
 
@@ -100,7 +121,7 @@ public final class AnvilDropScoreboard implements Listener {
 
         // Other worlds: hide our sidebar
         Objective cur = sb.getObjective(DisplaySlot.SIDEBAR);
-        if (cur != null && (cur.getName().equals("aves_event") || cur.getName().equals("aves_lobby"))) {
+        if (cur != null && (cur.getName().equals("aves_event") || cur.getName().equals("aves_lobby") || cur.getName().equals("aves_parkour"))) {
             cur.unregister();
         }
     }
@@ -109,6 +130,13 @@ public final class AnvilDropScoreboard implements Listener {
         return lines.stream()
                 .map(s -> Text.color(Text.replacePlaceholders(s, placeholders)))
                 .toList();
+    }
+
+    private static String formatTime(int seconds) {
+        int s = Math.max(0, seconds);
+        int m = s / 60;
+        int r = s % 60;
+        return String.format("%02d:%02d", m, r);
     }
 
     /**

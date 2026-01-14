@@ -1,0 +1,54 @@
+# AvesAnvilDrop - eventhelp.yml
+#
+# The command /eventhelp will show:
+# - default section (if enabled by the world section)
+# - the section for the player's current world (if present)
+#
+# Placeholders:
+# - {world}  -> current world name
+# - {prefix} -> messages.prefix from config.yml
+
+default:
+  header: "{prefix}&6Event Help"
+  lines:
+    - "&7"
+    - "&e/mutechat &7- Toggle chat mute (admins can still talk)"
+    - "&e/voicemute &7- Toggle voicechat.speak for the LuckPerms group default"
+    - "&e/dead <player> &7- Kill + mark player as dead"
+    - "&e/revive <player> &7- Revive a player"
+    - "&e/revive all &7- Revive everyone (requires confirm)"
+    - "&7"
+
+worlds:
+  # Example lobby / event control world
+  world:
+    includeDefault: true
+    header: "{prefix}&6Event Help &7(&f{world}&7)"
+    lines:
+      - "&e/anvildrop open &7- Teleport lobby -> AnvilDrop event world"
+      - "&e/anvildrop start &7- Start AnvilDrop countdown + waves"
+      - "&e/anvildrop stop &7- Stop AnvilDrop and return to lobby"
+      - "&e/parkourevent open &7- Teleport everyone -> Parkour world and place wall"
+      - "&e/parkourevent start &7- Remove barrier wall and start timer"
+      - "&e/parkourevent stop &7- Stop parkour and return to lobby"
+
+  # AnvilDrop event world
+  anvildrop:
+    includeDefault: true
+    header: "{prefix}&6AnvilDrop Help &7(&f{world}&7)"
+    lines:
+      - "&e/anvildrop start &7- Start countdown + anvil waves"
+      - "&e/anvildrop p &7- Pause anvil waves"
+      - "&e/anvildrop r &7- Resume anvil waves"
+      - "&e/anvildrop <percent> &7- Drop a custom % of anvils now"
+      - "&e/anvildrop stop &7- Stop event and return to lobby"
+
+  # Parkour world
+  parkour:
+    includeDefault: true
+    header: "{prefix}&aParkour Help &7(&f{world}&7)"
+    lines:
+      - "&e/parkourevent start &7- Remove barrier wall and start timer"
+      - "&e/parkourevent stop &7- Stop parkour and return to lobby"
+
+

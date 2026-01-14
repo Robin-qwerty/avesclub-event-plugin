@@ -3,6 +3,7 @@
 worlds:
   lobbyWorld: "world"
   eventWorld: "anvildrop"
+  parkourWorld: "parkour"
 
 spawns:
   lobby:
@@ -17,6 +18,29 @@ spawns:
     z: 0.5
     yaw: 0.0
     pitch: 0.0
+  parkour:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+  parkourSpectator:
+    x: 0.5
+    y: 100.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+parkour:
+  wall:
+    min:
+      x: -5
+      y: 70
+      z: -1
+    max:
+      x: 5
+      y: 75
+      z: -1
 
 # Arena cuboid bounds in the EVENT WORLD.
 # You can set this via /anvildrop setarena (requires WorldEdit selection).
@@ -68,6 +92,13 @@ lobbyScoreboard:
     - "&bavesclub.net"
   host: "Robin"
 
+parkourScoreboard:
+  enabled: true
+  title: "&a&lPARKOUR"
+  lines:
+    - "&eAlive: &f{alive}"
+    - "&eTime: &f{time}"
+
 joinTeleport:
   enabled: true
 
@@ -92,6 +123,25 @@ eventSettings:
       - "&7Right-click to open"
   menu:
     title: "&6Event Settings"
+    toggleHidePlayersName: "&eToggle: Hide players"
+    enabledLore:
+      - "&aEnabled"
+      - "&7Other players are hidden"
+      - "&7Click to disable"
+    disabledLore:
+      - "&cDisabled"
+      - "&7Other players are visible"
+      - "&7Click to enable"
+
+parkourSettings:
+  compass:
+    enabled: true
+    slot: 9
+    name: "&aParkour Settings"
+    lore:
+      - "&7Right-click to open"
+  menu:
+    title: "&aParkour Settings"
     toggleHidePlayersName: "&eToggle: Hide players"
     enabledLore:
       - "&aEnabled"
@@ -135,5 +185,14 @@ voiceMute:
   enabled: false
   group: "default"
   permission: "voicechat.speak"
+
+parkourMessages:
+  opened: "&aParkour event opened!"
+  started: "&aParkour started! Wall removed."
+  stopped: "&cParkour stopped! Wall placed."
+
+tabList:
+  deadEnabled: true
+  deadPrefix: "&c☠ &7"
 
 
