@@ -1,0 +1,12 @@
+club/aves/anvildrop/commands/ReviveCommand.class
+club/aves/anvildrop/ui/AnvilDropScoreboard$TeamParts.class
+club/aves/anvildrop/dead/DeadPermissionService.class
+club/aves/anvildrop/commands/DeadCommand.class
+club/aves/anvildrop/commands/VoiceMuteCommand.class
+club/aves/anvildrop/event/AnvilDropEventManager$1.class
+club/aves/anvildrop/ui/EventSettingsUI.class
+club/aves/anvildrop/config/ConfigMerge.class
+club/aves/anvildrop/listeners/JoinTeleportListener.class
+club/aves/anvildrop/commands/EventAdminCommand.class
+club/aves/anvildrop/commands/DiscordCommand.class
+club/aves/anvildrop/mods/ModRegistry.class

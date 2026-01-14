@@ -1,0 +1,63 @@
+name: AvesclubAnvilDrop
+main: club.aves.anvildrop.AnvilDropPlugin
+version: 1.0.0
+api-version: "1.21"
+author: Robinaves
+
+depend: []
+softdepend: [WorldEdit, LuckPerms]
+
+commands:
+  anvildrop:
+    description: Manage the AnvilDrop event
+    usage: /anvildrop <open|start|p|r|stop|setarena|reload|percent>
+    aliases: [ad]
+  discord:
+    description: Shows the Discord invite link
+    usage: /discord
+    aliases: [dc]
+  event:
+    description: Event admin commands
+    usage: /event <addmod|removemod|listmods>
+  revive:
+    description: Revive a dead player back into the active event
+    usage: /revive <player>
+  dead:
+    description: Kill a player and mark them as dead for the event
+    usage: /dead <player>
+  mutechat:
+    description: Toggle chat mute for everybody (admins can still talk)
+    usage: /mutechat
+  voicemute:
+    description: Toggle voice chat speak permission for LuckPerms group default
+    usage: /voicemute
+
+permissions:
+  anvildrop.open:
+    description: Allows opening the event (teleport lobby -> event)
+    default: op
+  anvildrop.start:
+    description: Allows starting the event countdown + anvil drops
+    default: op
+  anvildrop.control:
+    description: Allows pausing/resuming/stopping/manual percent/setting arena
+    default: op
+  anvildrop.reload:
+    description: Allows reloading the plugin config
+    default: op
+
+  event.admin:
+    description: Allows managing event mods (/event addmod/removemod)
+    default: op
+
+  event.dead:
+    description: Allows using /dead
+    default: op
+  event.revive:
+    description: Allows using /revive and /revive all
+    default: op
+  event.dead.status:
+    description: Marker permission for players who died (managed by the plugin)
+    default: false
+
+

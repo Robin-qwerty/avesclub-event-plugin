@@ -1,0 +1,139 @@
+# AvesAnvilDrop - config
+
+worlds:
+  lobbyWorld: "world"
+  eventWorld: "anvildrop"
+
+spawns:
+  lobby:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+  event:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+# Arena cuboid bounds in the EVENT WORLD.
+# You can set this via /anvildrop setarena (requires WorldEdit selection).
+arena:
+  min:
+    x: -10
+    y: 60
+    z: -10
+  max:
+    x: 10
+    y: 90
+    z: 10
+
+openScreen:
+  title: "&aAnvil Drop Event"
+  subtitle: "&fGet ready..."
+  seconds: 5
+
+countdown:
+  seconds: 10
+  chatFormat: "&eEvent starts in &6{seconds}&e..."
+  startMessage: "&aGO!"
+
+dropper:
+  enabled: true
+  intervalSeconds: 6
+  initialAnvilPercent: 40.0
+  increasePercentEachWave: 5.0
+  maxAnvilPercent: 95.0
+  material: "ANVIL" # ANVIL / CHIPPED_ANVIL / DAMAGED_ANVIL
+  onlyReplaceAir: true
+  applyPhysics: true # if true, anvils will fall like WorldEdit //replace
+
+scoreboard:
+  enabled: true
+  title: "&6&lANVIL DROP"
+  lines:
+    - "&eAlive: &f{alive}"
+  updateTicks: 20
+
+lobbyScoreboard:
+  enabled: true
+  title: "&6&lAvesclub event"
+  lines:
+    - ""
+    - "&ePlayers: &f{online}"
+    - "&eHost: &f{host}"
+    - ""
+    - "&bavesclub.net"
+  host: "Robin"
+
+joinTeleport:
+  enabled: true
+
+discord:
+  link: "https://discord.gg/your-invite"
+
+mods:
+  uuids: []
+
+deadTracking:
+  # This is the permission used as the DEAD marker on players.
+  # Kept separate from the /dead command permission.
+  permission: "event.dead.status"
+  uuids: []
+
+eventSettings:
+  compass:
+    enabled: true
+    slot: 9 # 1-9 (9 = last hotbar slot)
+    name: "&6Event Settings"
+    lore:
+      - "&7Right-click to open"
+  menu:
+    title: "&6Event Settings"
+    toggleHidePlayersName: "&eToggle: Hide players"
+    enabledLore:
+      - "&aEnabled"
+      - "&7Other players are hidden"
+      - "&7Click to disable"
+    disabledLore:
+      - "&cDisabled"
+      - "&7Other players are visible"
+      - "&7Click to enable"
+
+messages:
+  prefix: "&8[&6AnvilDrop&8] &r"
+  noPerm: "&cYou don't have permission."
+  playerOnly: "&cPlayers only."
+  worldMissing: "&cWorld not found: &f{world}"
+  arenaNotSet: "&cArena is not set. Use &f/anvildrop setarena&c with a WorldEdit selection."
+  opened: "&aEvent opened! Teleported lobby players."
+  started: "&aEvent started!"
+  paused: "&eAnvil drops paused."
+  resumed: "&aAnvil drops resumed."
+  stopped: "&cEvent stopped."
+  percentNow: "&eDropping anvils at &6{percent}%&e now."
+  reloaded: "&aConfig reloaded."
+  discord: "&bDiscord: &f{link}"
+  reviveUsage: "&cUsage: /revive <player> OR /revive all"
+  reviveNoActiveEvent: "&cThere is no active event right now."
+  reviveNotDead: "&cThat player is not dead."
+  reviveNotOnline: "&cThat player must be online to revive."
+  revived: "&aRevived &f{player}&a!"
+  reviveAllWarn: "&cThis will remove the dead flag from EVERYONE. Type &f/revive all confirm &cwithin 5 seconds."
+  reviveAllDone: "&aRevived all dead players."
+  deadUsage: "&cUsage: /dead <player>"
+  deadDone: "&cMarked &f{player}&c as dead."
+  chatMutedOn: "&cChat was muted."
+  chatMutedOff: "&aChat was unmuted."
+  chatMutedBlocked: "&cChat is muted."
+  voiceMutedOn: "&cVoice chat was muted."
+  voiceMutedOff: "&aVoice chat was unmuted."
+
+voiceMute:
+  enabled: false
+  group: "default"
+  permission: "voicechat.speak"
+
+
