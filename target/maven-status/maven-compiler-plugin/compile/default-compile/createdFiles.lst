@@ -4,6 +4,7 @@ club/aves/anvildrop/tablist/DeadTabListManager.class
 club/aves/anvildrop/dead/DeadPermissionService.class
 club/aves/anvildrop/commands/DeadCommand.class
 club/aves/anvildrop/commands/VoiceMuteCommand.class
+club/aves/anvildrop/dead/GlobalDeathListener.class
 club/aves/anvildrop/tablist/DeadTabListManager$Rank.class
 club/aves/anvildrop/event/AnvilDropEventManager$1.class
 club/aves/anvildrop/commands/ParkourEventCommand.class

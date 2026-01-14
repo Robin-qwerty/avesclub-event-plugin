@@ -13,6 +13,7 @@ import club.aves.anvildrop.chat.ChatMuteListener;
 import club.aves.anvildrop.chat.ChatMuteManager;
 import club.aves.anvildrop.config.ConfigMerge;
 import club.aves.anvildrop.config.YamlResourceMerge;
+import club.aves.anvildrop.dead.GlobalDeathListener;
 import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.hooks.WorldEditHook;
@@ -115,6 +116,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new ChatMuteListener(this, chatMute), this);
         Bukkit.getPluginManager().registerEvents(parkourEvent, this);
         Bukkit.getPluginManager().registerEvents(deadTab, this);
+        Bukkit.getPluginManager().registerEvents(new GlobalDeathListener(deadPerms, modRegistry), this);
 
         // If the plugin is reloaded while players are already online in the event world, ensure they have the compass.
         Bukkit.getScheduler().runTask(this, () -> eventSettingsUI.initForOnlinePlayers());

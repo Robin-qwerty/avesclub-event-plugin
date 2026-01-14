@@ -14,6 +14,7 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/config/PluginConfig.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/config/YamlResourceMerge.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/dead/DeadPermissionService.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/dead/GlobalDeathListener.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/event/AnvilDropEventManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/event/EventState.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/hooks/WorldEditHook.java
