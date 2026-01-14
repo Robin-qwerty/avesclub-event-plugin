@@ -76,7 +76,8 @@ public final class AnvilDropEventManager implements Listener {
     public boolean shouldForceSpectator(Player p) {
         if (p == null) return false;
         // Only players entering already-dead should be forced spectator.
-        return isActive() && deadPerms.isDead(p) && !deadDuringThisEvent.contains(p.getUniqueId());
+        boolean isDead = deadPerms.isDead(p) || deadPerms.getTrackedDeadUuids().contains(p.getUniqueId());
+        return isActive() && isDead && !deadDuringThisEvent.contains(p.getUniqueId());
     }
 
     public boolean revivePlayer(Player player) {
@@ -111,21 +112,27 @@ public final class AnvilDropEventManager implements Listener {
         participants.clear();
         eliminated.clear();
         deadDuringThisEvent.clear();
+        // Set OPEN before teleporting so "already dead -> spectator" logic applies immediately.
+        state = EventState.OPEN;
 
         for (Player p : lobby.getPlayers()) {
             participants.add(p.getUniqueId());
             p.teleport(cfg.eventSpawn);
             // Only players who ENTER the event already-dead should be forced spectator.
-            if (shouldForceSpectator(p)) {
-                p.setGameMode(GameMode.SPECTATOR);
-            }
+            // Teleport can complete before the client/world is fully ready; set spectator shortly after teleport.
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                PluginConfig c = PluginConfig.load(plugin.getConfig());
+                if (!p.isOnline()) return;
+                if (!p.getWorld().getName().equalsIgnoreCase(c.eventWorld)) return;
+                if (shouldForceSpectator(p)) {
+                    p.setGameMode(GameMode.SPECTATOR);
+                }
+            }, 2L);
             int fadeIn = 10;
             int stay = cfg.openSeconds * 20;
             int fadeOut = 10;
             p.sendTitle(Text.color(cfg.openTitle), Text.color(cfg.openSubtitle), fadeIn, stay, fadeOut);
         }
-
-        state = EventState.OPEN;
         startAliveUpdater();
         return true;
     }
@@ -209,6 +216,8 @@ public final class AnvilDropEventManager implements Listener {
         if (event != null && lobbySpawn != null) {
             for (Player p : event.getPlayers()) {
                 p.teleport(lobbySpawn);
+                // Requirement: when returning to lobby, ensure SURVIVAL
+                p.setGameMode(GameMode.SURVIVAL);
             }
         }
 

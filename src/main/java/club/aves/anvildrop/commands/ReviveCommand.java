@@ -89,11 +89,6 @@ public final class ReviveCommand implements CommandExecutor {
             return true;
         }
 
-        if (!eventManager.isActive()) {
-            sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveNoActiveEvent));
-            return true;
-        }
-
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
             sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveNotOnline));
@@ -114,18 +109,22 @@ public final class ReviveCommand implements CommandExecutor {
 
         // Remove dead marker permission and revive in the in-memory elimination tracker
         deadPerms.clearDead(target);
-        eventManager.revivePlayer(target);
+        if (eventManager.isActive()) {
+            eventManager.revivePlayer(target);
+        }
 
-        // Teleport back into the active event
+        // If an event is active, teleport back into it. Otherwise just clear dead status.
         PluginConfig c = PluginConfig.load(plugin.getConfig());
-        World eventWorld = Bukkit.getWorld(c.eventWorld);
-        Location spawn = c.eventSpawn != null ? c.eventSpawn : (eventWorld != null ? eventWorld.getSpawnLocation() : null);
-        if (spawn != null) {
-            target.teleport(spawn);
+        if (eventManager.isActive()) {
+            World eventWorld = Bukkit.getWorld(c.eventWorld);
+            Location spawn = c.eventSpawn != null ? c.eventSpawn : (eventWorld != null ? eventWorld.getSpawnLocation() : null);
+            if (spawn != null) {
+                target.teleport(spawn);
+            }
         }
         target.setGameMode(GameMode.SURVIVAL);
 
-        // Give settings item back (if enabled) and ensure dead players don't keep it
+        // Give settings item back (if enabled) when appropriate.
         Bukkit.getScheduler().runTask(plugin, () -> settingsUI.ensureCompass(target));
 
         sender.sendMessage(Text.color(c.msgPrefix + Text.replacePlaceholders(c.msgRevived, Map.of("player", target.getName()))));
