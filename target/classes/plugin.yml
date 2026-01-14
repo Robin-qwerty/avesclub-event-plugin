@@ -38,6 +38,10 @@ commands:
   eventhelp:
     description: Show event help for your current world
     usage: /eventhelp
+  ffaevent:
+    description: Manage the FFA event
+    usage: /ffaevent <open|start|stop|kit>
+    aliases: [ffa]
 
 permissions:
   anvildrop.open:

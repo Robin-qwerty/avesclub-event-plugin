@@ -13,11 +13,13 @@ public final class ParkourEventCommand implements CommandExecutor {
     private final Plugin plugin;
     private final ParkourEventManager parkour;
     private final club.aves.anvildrop.event.AnvilDropEventManager anvil;
+    private final club.aves.anvildrop.ffa.FFAEventManager ffa;
 
-    public ParkourEventCommand(Plugin plugin, ParkourEventManager parkour, club.aves.anvildrop.event.AnvilDropEventManager anvil) {
+    public ParkourEventCommand(Plugin plugin, ParkourEventManager parkour, club.aves.anvildrop.event.AnvilDropEventManager anvil, club.aves.anvildrop.ffa.FFAEventManager ffa) {
         this.plugin = plugin;
         this.parkour = parkour;
         this.anvil = anvil;
+        this.ffa = ffa;
     }
 
     @Override
@@ -36,7 +38,7 @@ public final class ParkourEventCommand implements CommandExecutor {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "open" -> {
-                if (anvil != null && anvil.isActive()) {
+                if ((anvil != null && anvil.isActive()) || (ffa != null && ffa.isActive())) {
                     sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't open Parkour while AnvilDrop is active."));
                     return true;
                 }
@@ -47,7 +49,7 @@ public final class ParkourEventCommand implements CommandExecutor {
                 return true;
             }
             case "start" -> {
-                if (anvil != null && anvil.isActive()) {
+                if ((anvil != null && anvil.isActive()) || (ffa != null && ffa.isActive())) {
                     sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start Parkour while AnvilDrop is active."));
                     return true;
                 }

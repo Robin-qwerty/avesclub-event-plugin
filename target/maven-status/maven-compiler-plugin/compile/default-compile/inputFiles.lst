@@ -6,6 +6,7 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/DiscordCommand.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/EventAdminCommand.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/EventHelpCommand.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/FFAEventCommand.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/MuteChatCommand.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/ParkourEventCommand.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/ReviveCommand.java
@@ -16,6 +17,10 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/dead/DeadPermissionService.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/event/AnvilDropEventManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/event/EventState.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ffa/FFAEventManager.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ffa/FFAEventState.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ffa/FFAKit.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ffa/FFAKitManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/hooks/WorldEditHook.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/listeners/JoinTeleportListener.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/model/ArenaCuboid.java

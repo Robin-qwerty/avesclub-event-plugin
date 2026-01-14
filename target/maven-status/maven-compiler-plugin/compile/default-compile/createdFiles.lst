@@ -1,6 +1,7 @@
 club/aves/anvildrop/commands/EventHelpCommand.class
 club/aves/anvildrop/ui/AnvilDropScoreboard$TeamParts.class
 club/aves/anvildrop/tablist/DeadTabListManager.class
+club/aves/anvildrop/commands/FFAEventCommand.class
 club/aves/anvildrop/dead/DeadPermissionService.class
 club/aves/anvildrop/commands/DeadCommand.class
 club/aves/anvildrop/commands/VoiceMuteCommand.class

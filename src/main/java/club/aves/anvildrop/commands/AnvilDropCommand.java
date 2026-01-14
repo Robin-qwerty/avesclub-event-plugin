@@ -5,6 +5,7 @@ import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.hooks.WorldEditHook;
 import club.aves.anvildrop.model.ArenaCuboid;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.parkour.ParkourEventManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -25,12 +26,14 @@ public final class AnvilDropCommand implements CommandExecutor, TabCompleter {
     private final AnvilDropEventManager manager;
     private final WorldEditHook worldEdit;
     private final ParkourEventManager parkour;
+    private final FFAEventManager ffa;
 
-    public AnvilDropCommand(Plugin plugin, AnvilDropEventManager manager, WorldEditHook worldEdit, ParkourEventManager parkour) {
+    public AnvilDropCommand(Plugin plugin, AnvilDropEventManager manager, WorldEditHook worldEdit, ParkourEventManager parkour, FFAEventManager ffa) {
         this.plugin = plugin;
         this.manager = manager;
         this.worldEdit = worldEdit;
         this.parkour = parkour;
+        this.ffa = ffa;
     }
 
     @Override
@@ -69,7 +72,7 @@ public final class AnvilDropCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(color(cfg.msgPrefix + cfg.msgPlayerOnly));
                     return true;
                 }
-                if (parkour != null && parkour.isActive()) {
+                if ((parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
                     sender.sendMessage(color(cfg.msgPrefix + "&cYou can't open AnvilDrop while Parkour is active."));
                     return true;
                 }
@@ -99,7 +102,7 @@ public final class AnvilDropCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(color(cfg.msgPrefix + cfg.msgNoPerm));
                     return true;
                 }
-                if (parkour != null && parkour.isActive()) {
+                if ((parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
                     sender.sendMessage(color(cfg.msgPrefix + "&cYou can't start AnvilDrop while Parkour is active."));
                     return true;
                 }

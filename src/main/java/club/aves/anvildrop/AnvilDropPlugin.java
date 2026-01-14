@@ -5,6 +5,7 @@ import club.aves.anvildrop.commands.DeadCommand;
 import club.aves.anvildrop.commands.DiscordCommand;
 import club.aves.anvildrop.commands.EventHelpCommand;
 import club.aves.anvildrop.commands.EventAdminCommand;
+import club.aves.anvildrop.commands.FFAEventCommand;
 import club.aves.anvildrop.commands.MuteChatCommand;
 import club.aves.anvildrop.commands.ParkourEventCommand;
 import club.aves.anvildrop.commands.ReviveCommand;
@@ -15,6 +16,8 @@ import club.aves.anvildrop.config.ConfigMerge;
 import club.aves.anvildrop.config.YamlResourceMerge;
 import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
+import club.aves.anvildrop.ffa.FFAEventManager;
+import club.aves.anvildrop.ffa.FFAKitManager;
 import club.aves.anvildrop.hooks.WorldEditHook;
 import club.aves.anvildrop.listeners.JoinTeleportListener;
 import club.aves.anvildrop.mods.ModRegistry;
@@ -36,6 +39,8 @@ public final class AnvilDropPlugin extends JavaPlugin {
     private ChatMuteManager chatMute;
     private ParkourEventManager parkourEvent;
     private DeadTabListManager deadTab;
+    private FFAKitManager ffaKits;
+    private FFAEventManager ffaEvent;
 
     @Override
     public void onEnable() {
@@ -58,10 +63,12 @@ public final class AnvilDropPlugin extends JavaPlugin {
         this.parkourEvent = new ParkourEventManager(this, scoreboard, eventSettingsUI);
         this.deadTab = new DeadTabListManager(this, deadPerms);
         this.deadTab.start();
+        this.ffaKits = new FFAKitManager(this);
+        this.ffaEvent = new FFAEventManager(this, ffaKits);
 
         var cmd = getCommand("anvildrop");
         if (cmd != null) {
-            var executor = new AnvilDropCommand(this, eventManager, worldEditHook, parkourEvent);
+            var executor = new AnvilDropCommand(this, eventManager, worldEditHook, parkourEvent, ffaEvent);
             cmd.setExecutor(executor);
             cmd.setTabCompleter(executor);
         }
@@ -85,7 +92,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var revive = getCommand("revive");
         if (revive != null) {
-            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry, parkourEvent));
+            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry, parkourEvent, ffaEvent));
         }
 
         var dead = getCommand("dead");
@@ -105,7 +112,12 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var parkour = getCommand("parkourevent");
         if (parkour != null) {
-            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent, eventManager));
+            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent, eventManager, ffaEvent));
+        }
+
+        var ffa = getCommand("ffaevent");
+        if (ffa != null) {
+            ffa.setExecutor(new FFAEventCommand(this, ffaEvent, ffaKits, eventManager, parkourEvent));
         }
 
         Bukkit.getPluginManager().registerEvents(eventManager, this);

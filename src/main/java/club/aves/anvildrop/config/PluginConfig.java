@@ -12,11 +12,13 @@ public final class PluginConfig {
     public final String lobbyWorld;
     public final String eventWorld;
     public final String parkourWorld;
+    public final String ffaWorld;
 
     public final Location lobbySpawn;
     public final Location eventSpawn;
     public final Location parkourSpawn;
     public final Location parkourSpectatorSpawn;
+    public final Location ffaOpenSpawn;
 
     public final ArenaCuboid arena;
 
@@ -57,6 +59,7 @@ public final class PluginConfig {
 
     public final club.aves.anvildrop.model.ArenaCuboid parkourWall;
     public final club.aves.anvildrop.model.ArenaCuboid parkourEndRegion;
+    public final club.aves.anvildrop.model.ArenaCuboid ffaStartRegion;
 
     public final String msgPrefix;
     public final String msgNoPerm;
@@ -95,11 +98,13 @@ public final class PluginConfig {
         this.lobbyWorld = c.getString("worlds.lobbyWorld", "world");
         this.eventWorld = c.getString("worlds.eventWorld", "anvildrop");
         this.parkourWorld = c.getString("worlds.parkourWorld", "parkour");
+        this.ffaWorld = c.getString("worlds.ffaWorld", "ffa");
 
         this.lobbySpawn = readSpawn(c, lobbyWorld, "spawns.lobby");
         this.eventSpawn = readSpawn(c, eventWorld, "spawns.event");
         this.parkourSpawn = readSpawn(c, parkourWorld, "spawns.parkour");
         this.parkourSpectatorSpawn = readSpawn(c, parkourWorld, "spawns.parkourSpectator");
+        this.ffaOpenSpawn = readSpawn(c, ffaWorld, "spawns.ffaOpen");
 
         this.arena = readArena(c, eventWorld);
 
@@ -173,6 +178,14 @@ public final class PluginConfig {
         int eMaxY = c.getInt("parkour.endRegion.max.y", c.getInt("parkour.end.y", 80));
         int eMaxZ = c.getInt("parkour.endRegion.max.z", c.getInt("parkour.end.z", 10));
         this.parkourEndRegion = club.aves.anvildrop.model.ArenaCuboid.normalized(parkourWorld, eMinX, eMinY, eMinZ, eMaxX, eMaxY, eMaxZ);
+
+        int fMinX = c.getInt("ffa.startRegion.min.x", -5);
+        int fMinY = c.getInt("ffa.startRegion.min.y", 80);
+        int fMinZ = c.getInt("ffa.startRegion.min.z", -5);
+        int fMaxX = c.getInt("ffa.startRegion.max.x", 5);
+        int fMaxY = c.getInt("ffa.startRegion.max.y", 80);
+        int fMaxZ = c.getInt("ffa.startRegion.max.z", 5);
+        this.ffaStartRegion = club.aves.anvildrop.model.ArenaCuboid.normalized(ffaWorld, fMinX, fMinY, fMinZ, fMaxX, fMaxY, fMaxZ);
 
         this.msgPrefix = c.getString("messages.prefix", "&8[&6AnvilDrop&8] &r");
         this.msgNoPerm = c.getString("messages.noPerm", "&cYou don't have permission.");

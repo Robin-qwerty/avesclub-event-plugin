@@ -3,6 +3,7 @@ package club.aves.anvildrop.commands;
 import club.aves.anvildrop.config.PluginConfig;
 import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
+import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.mods.ModRegistry;
 import club.aves.anvildrop.parkour.ParkourEventManager;
 import club.aves.anvildrop.ui.EventSettingsUI;
@@ -28,6 +29,7 @@ public final class ReviveCommand implements CommandExecutor {
     private final EventSettingsUI settingsUI;
     private final ModRegistry mods;
     private final ParkourEventManager parkour;
+    private final FFAEventManager ffa;
 
     private static final Map<String, Long> reviveAllConfirmUntil = new HashMap<>();
 
@@ -36,13 +38,15 @@ public final class ReviveCommand implements CommandExecutor {
                         DeadPermissionService deadPerms,
                         EventSettingsUI settingsUI,
                         ModRegistry mods,
-                        ParkourEventManager parkour) {
+                        ParkourEventManager parkour,
+                        FFAEventManager ffa) {
         this.plugin = plugin;
         this.eventManager = eventManager;
         this.deadPerms = deadPerms;
         this.settingsUI = settingsUI;
         this.mods = mods;
         this.parkour = parkour;
+        this.ffa = ffa;
     }
 
     @Override
@@ -65,7 +69,7 @@ public final class ReviveCommand implements CommandExecutor {
                 sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
                 return true;
             }
-            if (eventManager.isActive() || (parkour != null && parkour.isActive())) {
+            if (eventManager.isActive() || (parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
                 sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
                 return true;
             }

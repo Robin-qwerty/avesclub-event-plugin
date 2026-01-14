@@ -4,6 +4,7 @@ worlds:
   lobbyWorld: "world"
   eventWorld: "anvildrop"
   parkourWorld: "parkour"
+  ffaWorld: "ffa"
 
 spawns:
   lobby:
@@ -30,6 +31,23 @@ spawns:
     z: 0.5
     yaw: 0.0
     pitch: 0.0
+  ffaOpen:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+ffa:
+  startRegion:
+    min:
+      x: -5
+      y: 80
+      z: -5
+    max:
+      x: 5
+      y: 80
+      z: 5
 
 parkour:
   countdown:
@@ -220,6 +238,13 @@ parkourMessages:
   opened: "&aParkour event opened!"
   started: "&aParkour started! Wall removed."
   stopped: "&cParkour stopped! Wall placed."
+
+ffaMessages:
+  opened: "&aFFA event opened!"
+  started: "&aFFA started with kit &f{kit}&a!"
+  stopped: "&cFFA stopped."
+  kitSaved: "&aSaved kit &f{kit}&a."
+  kitNotFound: "&cKit not found: &f{kit}"
 
 tabList:
   deadEnabled: true
