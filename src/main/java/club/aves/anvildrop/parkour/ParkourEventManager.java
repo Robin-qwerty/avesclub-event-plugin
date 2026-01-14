@@ -4,6 +4,7 @@ import club.aves.anvildrop.config.PluginConfig;
 import club.aves.anvildrop.model.ArenaCuboid;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.ui.EventSettingsUI;
+import club.aves.anvildrop.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -14,6 +15,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.Plugin;
@@ -31,7 +33,9 @@ public final class ParkourEventManager implements Listener {
 
     private volatile ParkourEventState state = ParkourEventState.IDLE;
     private final Set<UUID> eliminated = new HashSet<>();
+    private final Set<UUID> finished = new HashSet<>();
     private BukkitTask timerTask;
+    private BukkitTask countdownTask;
     private long startMillis = 0L;
 
     public ParkourEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, EventSettingsUI settingsUI) {
@@ -55,11 +59,16 @@ public final class ParkourEventManager implements Listener {
         if (cfg.parkourSpawn == null) return false;
 
         eliminated.clear();
+        finished.clear();
         state = ParkourEventState.OPEN;
         startMillis = 0L;
         if (timerTask != null) {
             timerTask.cancel();
             timerTask = null;
+        }
+        if (countdownTask != null) {
+            countdownTask.cancel();
+            countdownTask = null;
         }
 
         // Place wall on open
@@ -74,11 +83,66 @@ public final class ParkourEventManager implements Listener {
 
         scoreboard.setAliveCountForWorld(cfg.parkourWorld, getAliveCount());
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
+        scoreboard.setFinishedCountForWorld(cfg.parkourWorld, finished.size());
         return true;
     }
 
     public boolean start() {
         if (state != ParkourEventState.OPEN) return false;
+        if (countdownTask != null) return false;
+        int seconds = Math.max(0, plugin.getConfig().getInt("parkour.countdown.seconds", 5));
+
+        if (seconds <= 0) {
+            beginRunNow();
+            return true;
+        }
+
+        // Countdown in chat in parkour world
+        countdownTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            int left = seconds;
+
+            @Override
+            public void run() {
+                PluginConfig c = PluginConfig.load(plugin.getConfig());
+                World w = Bukkit.getWorld(c.parkourWorld);
+                if (w == null) {
+                    stopCountdown();
+                    return;
+                }
+
+                if (left <= 0) {
+                    stopCountdown();
+                    beginRunNow();
+                    // GO title
+                    String t = plugin.getConfig().getString("parkour.countdown.goTitle", "&aGO!");
+                    String st = plugin.getConfig().getString("parkour.countdown.goSubtitle", "&fGood luck!");
+                    int goSecs = Math.max(1, plugin.getConfig().getInt("parkour.countdown.goTitleSeconds", 2));
+                    for (Player p : w.getPlayers()) {
+                        p.sendTitle(Text.color(t), Text.color(st), 5, goSecs * 20, 5);
+                    }
+                    return;
+                }
+
+                String fmt = plugin.getConfig().getString("parkour.countdown.chatFormat", "&eParkour starts in &6{seconds}&e...");
+                String msg = Text.color(Text.replacePlaceholders(fmt, java.util.Map.of("seconds", String.valueOf(left))));
+                for (Player p : w.getPlayers()) {
+                    p.sendMessage(msg);
+                }
+                left--;
+            }
+        }, 0L, 20L);
+
+        return true;
+    }
+
+    private void stopCountdown() {
+        if (countdownTask != null) {
+            countdownTask.cancel();
+            countdownTask = null;
+        }
+    }
+
+    private void beginRunNow() {
         state = ParkourEventState.RUNNING;
         placeWall(false);
         startMillis = System.currentTimeMillis();
@@ -90,7 +154,6 @@ public final class ParkourEventManager implements Listener {
             scoreboard.setTimeSecondsForWorld(c.parkourWorld, secs);
         }, 0L, 20L);
         updateAlive();
-        return true;
     }
 
     public void stop() {
@@ -111,19 +174,26 @@ public final class ParkourEventManager implements Listener {
         }
 
         eliminated.clear();
+        finished.clear();
         state = ParkourEventState.IDLE;
         startMillis = 0L;
         if (timerTask != null) {
             timerTask.cancel();
             timerTask = null;
         }
+        if (countdownTask != null) {
+            countdownTask.cancel();
+            countdownTask = null;
+        }
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
+        scoreboard.setFinishedCountForWorld(cfg.parkourWorld, 0);
         updateAlive();
     }
 
     private void updateAlive() {
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         scoreboard.setAliveCountForWorld(cfg.parkourWorld, getAliveCount());
+        scoreboard.setFinishedCountForWorld(cfg.parkourWorld, finished.size());
     }
 
     public int getAliveCount() {
@@ -134,6 +204,10 @@ public final class ParkourEventManager implements Listener {
         int alive = parkour.getPlayers().size();
         for (Player p : parkour.getPlayers()) {
             if (p.hasPermission("event.admin")) {
+                alive--;
+                continue;
+            }
+            if (finished.contains(p.getUniqueId())) {
                 alive--;
                 continue;
             }
@@ -150,6 +224,7 @@ public final class ParkourEventManager implements Listener {
         if (p == null) return;
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         eliminated.remove(p.getUniqueId());
+        finished.remove(p.getUniqueId());
         if (cfg.parkourSpawn != null) {
             p.teleport(cfg.parkourSpawn);
         }
@@ -203,6 +278,32 @@ public final class ParkourEventManager implements Listener {
             p.setGameMode(GameMode.SPECTATOR);
             settingsUI.removeCompass(p);
         });
+    }
+
+    @EventHandler
+    public void onMove(PlayerMoveEvent e) {
+        if (state != ParkourEventState.RUNNING) return;
+        if (e.getTo() == null) return;
+        if (e.getFrom().getBlockX() == e.getTo().getBlockX()
+                && e.getFrom().getBlockY() == e.getTo().getBlockY()
+                && e.getFrom().getBlockZ() == e.getTo().getBlockZ()) {
+            return;
+        }
+        PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        Player p = e.getPlayer();
+        if (!p.getWorld().getName().equalsIgnoreCase(cfg.parkourWorld)) return;
+        if (p.hasPermission("event.admin")) return;
+        if (eliminated.contains(p.getUniqueId())) return;
+        if (finished.contains(p.getUniqueId())) return;
+
+        // Finish if player enters the configured end region
+        ArenaCuboid end = cfg.parkourEndRegion;
+        if (end != null && end.contains(p.getLocation())) {
+            finished.add(p.getUniqueId());
+            p.setGameMode(GameMode.SPECTATOR);
+            settingsUI.removeCompass(p);
+            updateAlive();
+        }
     }
 
     @EventHandler

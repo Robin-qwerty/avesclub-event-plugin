@@ -61,7 +61,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var cmd = getCommand("anvildrop");
         if (cmd != null) {
-            var executor = new AnvilDropCommand(this, eventManager, worldEditHook);
+            var executor = new AnvilDropCommand(this, eventManager, worldEditHook, parkourEvent);
             cmd.setExecutor(executor);
             cmd.setTabCompleter(executor);
         }
@@ -105,7 +105,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var parkour = getCommand("parkourevent");
         if (parkour != null) {
-            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent));
+            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent, eventManager));
         }
 
         Bukkit.getPluginManager().registerEvents(eventManager, this);

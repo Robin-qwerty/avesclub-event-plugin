@@ -12,10 +12,12 @@ public final class ParkourEventCommand implements CommandExecutor {
 
     private final Plugin plugin;
     private final ParkourEventManager parkour;
+    private final club.aves.anvildrop.event.AnvilDropEventManager anvil;
 
-    public ParkourEventCommand(Plugin plugin, ParkourEventManager parkour) {
+    public ParkourEventCommand(Plugin plugin, ParkourEventManager parkour, club.aves.anvildrop.event.AnvilDropEventManager anvil) {
         this.plugin = plugin;
         this.parkour = parkour;
+        this.anvil = anvil;
     }
 
     @Override
@@ -34,6 +36,10 @@ public final class ParkourEventCommand implements CommandExecutor {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "open" -> {
+                if (anvil != null && anvil.isActive()) {
+                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't open Parkour while AnvilDrop is active."));
+                    return true;
+                }
                 boolean ok = parkour.open();
                 sender.sendMessage(Text.color(cfg.msgPrefix + (ok
                         ? plugin.getConfig().getString("parkourMessages.opened", "&aParkour event opened!")
@@ -41,6 +47,10 @@ public final class ParkourEventCommand implements CommandExecutor {
                 return true;
             }
             case "start" -> {
+                if (anvil != null && anvil.isActive()) {
+                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start Parkour while AnvilDrop is active."));
+                    return true;
+                }
                 boolean ok = parkour.start();
                 sender.sendMessage(Text.color(cfg.msgPrefix + (ok
                         ? plugin.getConfig().getString("parkourMessages.started", "&aParkour started! Wall removed.")

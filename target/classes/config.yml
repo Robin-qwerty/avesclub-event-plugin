@@ -32,6 +32,12 @@ spawns:
     pitch: 0.0
 
 parkour:
+  countdown:
+    seconds: 5
+    chatFormat: "&eParkour starts in &6{seconds}&e..."
+    goTitle: "&aGO!"
+    goSubtitle: "&fGood luck!"
+    goTitleSeconds: 2
   wall:
     min:
       x: -5
@@ -41,6 +47,21 @@ parkour:
       x: 5
       y: 75
       z: -1
+  end:
+    x: 0
+    y: 80
+    z: 10
+  endRegion:
+    # If set, entering this cuboid ends the parkour run (player becomes spectator).
+    # This is more reliable than a single block.
+    min:
+      x: 0
+      y: 80
+      z: 10
+    max:
+      x: 0
+      y: 82
+      z: 12
 
 # Arena cuboid bounds in the EVENT WORLD.
 # You can set this via /anvildrop setarena (requires WorldEdit selection).
@@ -63,6 +84,9 @@ countdown:
   seconds: 10
   chatFormat: "&eEvent starts in &6{seconds}&e..."
   startMessage: "&aGO!"
+  goTitle: "&aGO!"
+  goSubtitle: "&fGood luck!"
+  goTitleSeconds: 2
 
 dropper:
   enabled: true
@@ -77,8 +101,10 @@ dropper:
 scoreboard:
   enabled: true
   title: "&6&lANVIL DROP"
+  extraTop: []
   lines:
     - "&eAlive: &f{alive}"
+  extraBottom: []
   updateTicks: 20
 
 lobbyScoreboard:
@@ -95,9 +121,12 @@ lobbyScoreboard:
 parkourScoreboard:
   enabled: true
   title: "&a&lPARKOUR"
+  extraTop: []
   lines:
     - "&eAlive: &f{alive}"
+    - "&eFinished: &f{finished}"
     - "&eTime: &f{time}"
+  extraBottom: []
 
 joinTeleport:
   enabled: true
@@ -173,6 +202,7 @@ messages:
   revived: "&aRevived &f{player}&a!"
   reviveAllWarn: "&cThis will remove the dead flag from EVERYONE. Type &f/revive all confirm &cwithin 5 seconds."
   reviveAllDone: "&aRevived all dead players."
+  reviveAllNotAllowed: "&c/revive all can only be used in the lobby when no event is active."
   deadUsage: "&cUsage: /dead <player>"
   deadDone: "&cMarked &f{player}&c as dead."
   chatMutedOn: "&cChat was muted."

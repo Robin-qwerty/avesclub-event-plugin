@@ -29,6 +29,7 @@ public final class AnvilDropScoreboard implements Listener {
 
     private final Map<String, Integer> aliveCountsByWorld = new HashMap<>();
     private final Map<String, Integer> timeSecondsByWorld = new HashMap<>();
+    private final Map<String, Integer> finishedCountsByWorld = new HashMap<>();
 
     public AnvilDropScoreboard(Plugin plugin) {
         this.plugin = plugin;
@@ -47,6 +48,11 @@ public final class AnvilDropScoreboard implements Listener {
     public void setTimeSecondsForWorld(String worldName, int seconds) {
         if (worldName == null) return;
         timeSecondsByWorld.put(worldName.toLowerCase(), Math.max(0, seconds));
+    }
+
+    public void setFinishedCountForWorld(String worldName, int finished) {
+        if (worldName == null) return;
+        finishedCountsByWorld.put(worldName.toLowerCase(), Math.max(0, finished));
     }
 
     public void startUpdater() {
@@ -105,6 +111,7 @@ public final class AnvilDropScoreboard implements Listener {
             setSidebar(sb, "aves_parkour", Text.color(cfg.parkourScoreboardTitle),
                     replaceAll(cfg.parkourScoreboardLines, Map.of(
                             "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
+                            "finished", String.valueOf(finishedCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
                             "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0))
                     )));
             return;

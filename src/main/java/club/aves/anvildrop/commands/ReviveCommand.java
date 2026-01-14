@@ -60,6 +60,20 @@ public final class ReviveCommand implements CommandExecutor {
         }
 
         if (args[0].equalsIgnoreCase("all")) {
+            // Requirement: /revive all only works when no event is active and sender is in lobby world.
+            if (!(sender instanceof Player sp)) {
+                sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
+                return true;
+            }
+            if (eventManager.isActive() || (parkour != null && parkour.isActive())) {
+                sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
+                return true;
+            }
+            if (!sp.getWorld().getName().equalsIgnoreCase(cfg.lobbyWorld)) {
+                sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
+                return true;
+            }
+
             String key = sender.getName().toLowerCase();
             long now = System.currentTimeMillis();
 
@@ -71,6 +85,16 @@ public final class ReviveCommand implements CommandExecutor {
                     return true;
                 }
                 reviveAllConfirmUntil.remove(key);
+
+                // Teleport everyone to lobby (requirement)
+                org.bukkit.World lobby = Bukkit.getWorld(cfg.lobbyWorld);
+                org.bukkit.Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
+                if (lobbySpawn != null) {
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        p.teleport(lobbySpawn);
+                        p.setGameMode(GameMode.SURVIVAL);
+                    }
+                }
 
                 // Clear tracked dead UUIDs (works for offline too via LuckPerms command)
                 for (var uuid : deadPerms.getTrackedDeadUuids()) {

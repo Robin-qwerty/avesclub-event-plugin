@@ -40,6 +40,8 @@ public final class PluginConfig {
     public final boolean scoreboardEnabled;
     public final String scoreboardTitle;
     public final java.util.List<String> scoreboardLines;
+    public final java.util.List<String> scoreboardExtraTop;
+    public final java.util.List<String> scoreboardExtraBottom;
     public final int scoreboardUpdateTicks;
 
     public final boolean lobbyScoreboardEnabled;
@@ -50,8 +52,11 @@ public final class PluginConfig {
     public final boolean parkourScoreboardEnabled;
     public final String parkourScoreboardTitle;
     public final java.util.List<String> parkourScoreboardLines;
+    public final java.util.List<String> parkourScoreboardExtraTop;
+    public final java.util.List<String> parkourScoreboardExtraBottom;
 
     public final club.aves.anvildrop.model.ArenaCuboid parkourWall;
+    public final club.aves.anvildrop.model.ArenaCuboid parkourEndRegion;
 
     public final String msgPrefix;
     public final String msgNoPerm;
@@ -73,6 +78,7 @@ public final class PluginConfig {
     public final String msgRevived;
     public final String msgReviveAllWarn;
     public final String msgReviveAllDone;
+    public final String msgReviveAllNotAllowed;
     public final String msgDeadUsage;
     public final String msgDeadDone;
     public final String msgChatMutedOn;
@@ -123,7 +129,9 @@ public final class PluginConfig {
             String aliveLine = c.getString("scoreboard.aliveLine", "&eAlive: &f{alive}");
             eventLines = java.util.List.of(aliveLine);
         }
-        this.scoreboardLines = eventLines;
+        this.scoreboardExtraTop = safeList(c.getStringList("scoreboard.extraTop"));
+        this.scoreboardExtraBottom = safeList(c.getStringList("scoreboard.extraBottom"));
+        this.scoreboardLines = concat(scoreboardExtraTop, eventLines, scoreboardExtraBottom);
         this.scoreboardUpdateTicks = Math.max(10, c.getInt("scoreboard.updateTicks", 20));
 
         this.lobbyScoreboardEnabled = c.getBoolean("lobbyScoreboard.enabled", true);
@@ -145,7 +153,9 @@ public final class PluginConfig {
         this.parkourScoreboardTitle = c.getString("parkourScoreboard.title", "&a&lPARKOUR");
         java.util.List<String> pkLines = c.getStringList("parkourScoreboard.lines");
         if (pkLines == null || pkLines.isEmpty()) pkLines = java.util.List.of("&eAlive: &f{alive}");
-        this.parkourScoreboardLines = pkLines;
+        this.parkourScoreboardExtraTop = safeList(c.getStringList("parkourScoreboard.extraTop"));
+        this.parkourScoreboardExtraBottom = safeList(c.getStringList("parkourScoreboard.extraBottom"));
+        this.parkourScoreboardLines = concat(parkourScoreboardExtraTop, pkLines, parkourScoreboardExtraBottom);
 
         int wMinX = c.getInt("parkour.wall.min.x", -5);
         int wMinY = c.getInt("parkour.wall.min.y", 70);
@@ -154,6 +164,15 @@ public final class PluginConfig {
         int wMaxY = c.getInt("parkour.wall.max.y", 75);
         int wMaxZ = c.getInt("parkour.wall.max.z", -1);
         this.parkourWall = club.aves.anvildrop.model.ArenaCuboid.normalized(parkourWorld, wMinX, wMinY, wMinZ, wMaxX, wMaxY, wMaxZ);
+
+        // Parkour end region (fallback to single end x/y/z if region missing)
+        int eMinX = c.getInt("parkour.endRegion.min.x", c.getInt("parkour.end.x", 0));
+        int eMinY = c.getInt("parkour.endRegion.min.y", c.getInt("parkour.end.y", 80));
+        int eMinZ = c.getInt("parkour.endRegion.min.z", c.getInt("parkour.end.z", 10));
+        int eMaxX = c.getInt("parkour.endRegion.max.x", c.getInt("parkour.end.x", 0));
+        int eMaxY = c.getInt("parkour.endRegion.max.y", c.getInt("parkour.end.y", 80));
+        int eMaxZ = c.getInt("parkour.endRegion.max.z", c.getInt("parkour.end.z", 10));
+        this.parkourEndRegion = club.aves.anvildrop.model.ArenaCuboid.normalized(parkourWorld, eMinX, eMinY, eMinZ, eMaxX, eMaxY, eMaxZ);
 
         this.msgPrefix = c.getString("messages.prefix", "&8[&6AnvilDrop&8] &r");
         this.msgNoPerm = c.getString("messages.noPerm", "&cYou don't have permission.");
@@ -175,6 +194,7 @@ public final class PluginConfig {
         this.msgRevived = c.getString("messages.revived", "&aRevived &f{player}&a!");
         this.msgReviveAllWarn = c.getString("messages.reviveAllWarn", "&cThis will remove the dead flag from EVERYONE. Type &f/revive all confirm &cwithin 5 seconds.");
         this.msgReviveAllDone = c.getString("messages.reviveAllDone", "&aRevived all dead players.");
+        this.msgReviveAllNotAllowed = c.getString("messages.reviveAllNotAllowed", "&c/revive all can only be used in the lobby when no event is active.");
         this.msgDeadUsage = c.getString("messages.deadUsage", "&cUsage: /dead <player>");
         this.msgDeadDone = c.getString("messages.deadDone", "&cMarked &f{player}&c as dead.");
         this.msgChatMutedOn = c.getString("messages.chatMutedOn", "&cChat was muted.");
@@ -216,6 +236,18 @@ public final class PluginConfig {
     private static double clampPercent(double p) {
         if (Double.isNaN(p) || Double.isInfinite(p)) return 0.0;
         return Math.max(0.0, Math.min(100.0, p));
+    }
+
+    private static java.util.List<String> safeList(java.util.List<String> in) {
+        return (in == null) ? java.util.List.of() : in;
+    }
+
+    private static java.util.List<String> concat(java.util.List<String> a, java.util.List<String> b, java.util.List<String> c) {
+        java.util.ArrayList<String> out = new java.util.ArrayList<>(a.size() + b.size() + c.size());
+        out.addAll(a);
+        out.addAll(b);
+        out.addAll(c);
+        return out;
     }
 }
 

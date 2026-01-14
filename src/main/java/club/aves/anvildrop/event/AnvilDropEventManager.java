@@ -176,6 +176,12 @@ public final class AnvilDropEventManager implements Listener {
                     for (Player p : w.getPlayers()) {
                         p.sendMessage(Text.color(c.msgPrefix + c.countdownStartMessage));
                     }
+                    String t = plugin.getConfig().getString("countdown.goTitle", "&aGO!");
+                    String st = plugin.getConfig().getString("countdown.goSubtitle", "&fGood luck!");
+                    int goSecs = Math.max(1, plugin.getConfig().getInt("countdown.goTitleSeconds", 2));
+                    for (Player p : w.getPlayers()) {
+                        p.sendTitle(Text.color(t), Text.color(st), 5, goSecs * 20, 5);
+                    }
                     beginRunning();
                     return;
                 }
