@@ -2,6 +2,7 @@ package club.aves.anvildrop.parkour;
 
 import club.aves.anvildrop.config.PluginConfig;
 import club.aves.anvildrop.model.ArenaCuboid;
+import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.ui.EventSettingsUI;
 import club.aves.anvildrop.util.Text;
@@ -30,26 +31,40 @@ public final class ParkourEventManager implements Listener {
     private final Plugin plugin;
     private final AnvilDropScoreboard scoreboard;
     private final EventSettingsUI settingsUI;
+    private final DeadPermissionService deadPerms;
 
     private volatile ParkourEventState state = ParkourEventState.IDLE;
     private final Set<UUID> eliminated = new HashSet<>();
     private final Set<UUID> finished = new HashSet<>();
     private BukkitTask timerTask;
     private BukkitTask countdownTask;
+    private Integer stopAt = null;
+    private boolean ending = false;
     private long startMillis = 0L;
 
-    public ParkourEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, EventSettingsUI settingsUI) {
+    private club.aves.anvildrop.reconnect.ReconnectManager reconnect;
+
+    public ParkourEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, EventSettingsUI settingsUI, DeadPermissionService deadPerms) {
         this.plugin = plugin;
         this.scoreboard = scoreboard;
         this.settingsUI = settingsUI;
+        this.deadPerms = deadPerms;
+    }
+
+    public void setReconnectManager(club.aves.anvildrop.reconnect.ReconnectManager reconnect) {
+        this.reconnect = reconnect;
     }
 
     public ParkourEventState getState() {
         return state;
     }
 
+    public boolean isAcceptingJoins() {
+        return state == ParkourEventState.OPEN && countdownTask == null;
+    }
+
     public boolean isActive() {
-        return state != ParkourEventState.IDLE;
+        return state != ParkourEventState.IDLE || ending;
     }
 
     public boolean open() {
@@ -60,6 +75,8 @@ public final class ParkourEventManager implements Listener {
 
         eliminated.clear();
         finished.clear();
+        stopAt = null;
+        ending = false;
         state = ParkourEventState.OPEN;
         startMillis = 0L;
         if (timerTask != null) {
@@ -88,8 +105,13 @@ public final class ParkourEventManager implements Listener {
     }
 
     public boolean start() {
+        return start(null);
+    }
+
+    public boolean start(Integer stopAt) {
         if (state != ParkourEventState.OPEN) return false;
         if (countdownTask != null) return false;
+        this.stopAt = stopAt;
         int seconds = Math.max(0, plugin.getConfig().getInt("parkour.countdown.seconds", 5));
 
         if (seconds <= 0) {
@@ -176,6 +198,8 @@ public final class ParkourEventManager implements Listener {
         eliminated.clear();
         finished.clear();
         state = ParkourEventState.IDLE;
+        stopAt = null;
+        ending = false;
         startMillis = 0L;
         if (timerTask != null) {
             timerTask.cancel();
@@ -194,6 +218,7 @@ public final class ParkourEventManager implements Listener {
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         scoreboard.setAliveCountForWorld(cfg.parkourWorld, getAliveCount());
         scoreboard.setFinishedCountForWorld(cfg.parkourWorld, finished.size());
+        if (stopAt != null) checkStopAt();
     }
 
     public int getAliveCount() {
@@ -213,7 +238,22 @@ public final class ParkourEventManager implements Listener {
             }
             if (eliminated.contains(p.getUniqueId())) alive--;
         }
+        if (reconnect != null) {
+            alive += reconnect.getPendingAliveForWorld(cfg.parkourWorld);
+        }
         return Math.max(0, alive);
+    }
+
+    public boolean isEliminated(UUID uuid) {
+        return uuid != null && eliminated.contains(uuid);
+    }
+
+    public boolean isFinished(UUID uuid) {
+        return uuid != null && finished.contains(uuid);
+    }
+
+    public void refreshAliveCount() {
+        updateAlive();
     }
 
     public boolean isEliminated(Player p) {
@@ -258,10 +298,59 @@ public final class ParkourEventManager implements Listener {
         if (state != ParkourEventState.RUNNING) return;
 
         eliminated.add(p.getUniqueId());
+        if (deadPerms != null) deadPerms.markDead(p);
         // Ensure their compass doesn't drop and they don't keep it
         e.getDrops().removeIf(settingsUI::isAnySettingsCompass);
         settingsUI.removeCompass(p);
         updateAlive();
+    }
+
+    private void checkStopAt() {
+        if (stopAt == null || ending) return;
+        int alive = getAliveCount();
+        if (alive > stopAt) return;
+        endDueToStopAt();
+    }
+
+    private void endDueToStopAt() {
+        ending = true;
+        stopCountdown();
+        if (timerTask != null) {
+            timerTask.cancel();
+            timerTask = null;
+        }
+        state = ParkourEventState.IDLE;
+
+        PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        World w = Bukkit.getWorld(cfg.parkourWorld);
+        if (w != null) {
+            for (Player p : w.getPlayers()) {
+                p.sendMessage(Text.color(cfg.msgPrefix + cfg.msgEventEnded));
+                if (deadPerms == null || !deadPerms.isDead(p)) {
+                    p.sendMessage(Text.color(cfg.msgPrefix + cfg.msgNextRoundChat));
+                    p.sendTitle(Text.color(cfg.msgNextRoundTitle), Text.color(cfg.msgNextRoundSubtitle), 5, cfg.msgNextRoundTitleSeconds * 20, 5);
+                }
+            }
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            World lobby = Bukkit.getWorld(cfg.lobbyWorld);
+            Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
+            if (w != null && lobbySpawn != null) {
+                for (Player p : w.getPlayers()) {
+                    p.teleport(lobbySpawn);
+                    p.setGameMode(GameMode.SURVIVAL);
+                    settingsUI.removeCompass(p);
+                }
+            }
+            eliminated.clear();
+            finished.clear();
+            stopAt = null;
+            ending = false;
+            scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
+            scoreboard.setFinishedCountForWorld(cfg.parkourWorld, 0);
+            updateAlive();
+        }, 100L);
     }
 
     @EventHandler

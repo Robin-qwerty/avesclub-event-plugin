@@ -83,6 +83,18 @@ public final class DeadTabListManager implements Listener {
         if (t == null) t = sb.registerNewTeam(name);
         t.setPrefix(prefix);
         t.setSuffix("");
+        // Force name color (this is what makes it actually greyed out in tab).
+        if (name.endsWith("_d")) {
+            t.setColor(ChatColor.GRAY);
+        } else {
+            // Set to the rank color for alive entries
+            for (Rank r : Rank.values()) {
+                if (name.contains(r.order)) {
+                    t.setColor(r.color);
+                    break;
+                }
+            }
+        }
     }
 
     private void clearManagedTeams(Scoreboard sb) {
@@ -115,20 +127,22 @@ public final class DeadTabListManager implements Listener {
     }
 
     private enum Rank {
-        OWNER("00_owner", ChatColor.GOLD.toString()),
-        DEV("01_dev", ChatColor.DARK_PURPLE.toString()),
-        ADMIN("02_admin", ChatColor.DARK_BLUE.toString()),
-        MOD("03_mod", ChatColor.AQUA.toString()),
-        MEDIA("04_media", ChatColor.LIGHT_PURPLE.toString()),
-        VIP("05_vip", ChatColor.GREEN.toString()),
-        DEFAULT("06_default", ChatColor.WHITE.toString());
+        OWNER("00_owner", ChatColor.GOLD),
+        DEV("01_dev", ChatColor.DARK_PURPLE),
+        ADMIN("02_admin", ChatColor.DARK_BLUE),
+        MOD("03_mod", ChatColor.AQUA),
+        MEDIA("04_media", ChatColor.LIGHT_PURPLE),
+        VIP("05_vip", ChatColor.GREEN),
+        DEFAULT("06_default", ChatColor.WHITE);
 
         final String order;
         final String prefix;
+        final ChatColor color;
 
-        Rank(String order, String prefix) {
+        Rank(String order, ChatColor color) {
             this.order = order;
-            this.prefix = prefix;
+            this.color = color;
+            this.prefix = color.toString();
         }
     }
 

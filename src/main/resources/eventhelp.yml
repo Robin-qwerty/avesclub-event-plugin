@@ -21,7 +21,7 @@ default:
 
 worlds:
   # Example lobby / event control world
-  world:
+  eventspawn:
     includeDefault: true
     header: "{prefix}&6Event Help &7(&f{world}&7)"
     lines:
@@ -44,7 +44,7 @@ worlds:
       - "&e/anvildrop stop &7- Stop event and return to lobby"
 
   # Parkour world
-  parkour:
+  PyramidTempleParkour:
     includeDefault: true
     header: "{prefix}&aParkour Help &7(&f{world}&7)"
     lines:

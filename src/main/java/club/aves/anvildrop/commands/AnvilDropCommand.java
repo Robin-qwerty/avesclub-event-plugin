@@ -106,7 +106,15 @@ public final class AnvilDropCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(color(cfg.msgPrefix + "&cYou can't start AnvilDrop while Parkour is active."));
                     return true;
                 }
-                if (manager.startEvent()) {
+                Integer stopAt = parseStopAt(args);
+                if (stopAt != null) {
+                    int alive = manager.getAliveCount();
+                    if (alive <= stopAt) {
+                        sender.sendMessage(color(cfg.msgPrefix + Text.replacePlaceholders(cfg.msgStopAtTooHigh, Map.of("alive", String.valueOf(alive)))));
+                        return true;
+                    }
+                }
+                if (manager.startEvent(stopAt)) {
                     sender.sendMessage(color(cfg.msgPrefix + cfg.msgStarted));
                 } else {
                     sender.sendMessage(color(cfg.msgPrefix + "&cEvent is not open (or worlds missing)."));
@@ -223,6 +231,20 @@ public final class AnvilDropCommand implements CommandExecutor, TabCompleter {
         } catch (Exception ignored) {
             return false;
         }
+    }
+
+    private static Integer parseStopAt(String[] args) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equalsIgnoreCase("-stopat")) {
+                try {
+                    int v = Integer.parseInt(args[i + 1]);
+                    return Math.max(1, v);
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
     private static String color(String s) {

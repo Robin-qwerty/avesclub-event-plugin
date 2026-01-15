@@ -1,4 +1,5 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/AnvilDropPlugin.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/access/EventAccessListener.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/chat/ChatMuteListener.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/chat/ChatMuteManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/commands/AnvilDropCommand.java
@@ -27,6 +28,7 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/mods/ModRegistry.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/parkour/ParkourEventManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/parkour/ParkourEventState.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/reconnect/ReconnectManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/tablist/DeadTabListManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ui/AnvilDropScoreboard.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ui/EventSettingsUI.java

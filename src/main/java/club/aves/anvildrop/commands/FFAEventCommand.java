@@ -70,7 +70,15 @@ public final class FFAEventCommand implements CommandExecutor {
                     return true;
                 }
                 String kit = args[1];
-                boolean ok = ffa.start(kit);
+                Integer stopAt = parseStopAt(args);
+                if (stopAt != null) {
+                    int alive = ffa.getAliveCount();
+                    if (alive <= stopAt) {
+                        sender.sendMessage(Text.color(cfg.msgPrefix + Text.replacePlaceholders(cfg.msgStopAtTooHigh, java.util.Map.of("alive", String.valueOf(alive)))));
+                        return true;
+                    }
+                }
+                boolean ok = ffa.start(kit, stopAt);
                 if (ok) {
                     sender.sendMessage(Text.color(cfg.msgPrefix + Text.replacePlaceholders(
                             plugin.getConfig().getString("ffaMessages.started", "&aFFA started with kit &f{kit}&a!"),
@@ -172,6 +180,20 @@ public final class FFAEventCommand implements CommandExecutor {
                 return true;
             }
         }
+    }
+
+    private Integer parseStopAt(String[] args) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equalsIgnoreCase("-stopat")) {
+                try {
+                    int v = Integer.parseInt(args[i + 1]);
+                    return Math.max(1, v);
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 }
 

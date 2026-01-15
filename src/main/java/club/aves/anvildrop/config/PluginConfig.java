@@ -19,6 +19,7 @@ public final class PluginConfig {
     public final Location parkourSpawn;
     public final Location parkourSpectatorSpawn;
     public final Location ffaOpenSpawn;
+    public final Location ffaSpectatorSpawn;
 
     public final ArenaCuboid arena;
 
@@ -57,9 +58,18 @@ public final class PluginConfig {
     public final java.util.List<String> parkourScoreboardExtraTop;
     public final java.util.List<String> parkourScoreboardExtraBottom;
 
+    public final boolean ffaScoreboardEnabled;
+    public final String ffaScoreboardTitle;
+    public final java.util.List<String> ffaScoreboardLines;
+    public final java.util.List<String> ffaScoreboardExtraTop;
+    public final java.util.List<String> ffaScoreboardExtraBottom;
+
     public final club.aves.anvildrop.model.ArenaCuboid parkourWall;
     public final club.aves.anvildrop.model.ArenaCuboid parkourEndRegion;
     public final club.aves.anvildrop.model.ArenaCuboid ffaStartRegion;
+
+    public final String ffaWorldGuardRegion;
+    public final String ffaWorldGuardWorld;
 
     public final String msgPrefix;
     public final String msgNoPerm;
@@ -82,6 +92,12 @@ public final class PluginConfig {
     public final String msgReviveAllWarn;
     public final String msgReviveAllDone;
     public final String msgReviveAllNotAllowed;
+    public final String msgStopAtTooHigh;
+    public final String msgEventEnded;
+    public final String msgNextRoundChat;
+    public final String msgNextRoundTitle;
+    public final String msgNextRoundSubtitle;
+    public final int msgNextRoundTitleSeconds;
     public final String msgDeadUsage;
     public final String msgDeadDone;
     public final String msgChatMutedOn;
@@ -105,6 +121,7 @@ public final class PluginConfig {
         this.parkourSpawn = readSpawn(c, parkourWorld, "spawns.parkour");
         this.parkourSpectatorSpawn = readSpawn(c, parkourWorld, "spawns.parkourSpectator");
         this.ffaOpenSpawn = readSpawn(c, ffaWorld, "spawns.ffaOpen");
+        this.ffaSpectatorSpawn = readSpawn(c, ffaWorld, "spawns.ffaSpectator");
 
         this.arena = readArena(c, eventWorld);
 
@@ -162,6 +179,14 @@ public final class PluginConfig {
         this.parkourScoreboardExtraBottom = safeList(c.getStringList("parkourScoreboard.extraBottom"));
         this.parkourScoreboardLines = concat(parkourScoreboardExtraTop, pkLines, parkourScoreboardExtraBottom);
 
+        this.ffaScoreboardEnabled = c.getBoolean("ffaScoreboard.enabled", true);
+        this.ffaScoreboardTitle = c.getString("ffaScoreboard.title", "&c&lFFA");
+        java.util.List<String> ffaLines = c.getStringList("ffaScoreboard.lines");
+        if (ffaLines == null || ffaLines.isEmpty()) ffaLines = java.util.List.of("&eAlive: &f{alive}");
+        this.ffaScoreboardExtraTop = safeList(c.getStringList("ffaScoreboard.extraTop"));
+        this.ffaScoreboardExtraBottom = safeList(c.getStringList("ffaScoreboard.extraBottom"));
+        this.ffaScoreboardLines = concat(ffaScoreboardExtraTop, ffaLines, ffaScoreboardExtraBottom);
+
         int wMinX = c.getInt("parkour.wall.min.x", -5);
         int wMinY = c.getInt("parkour.wall.min.y", 70);
         int wMinZ = c.getInt("parkour.wall.min.z", -1);
@@ -187,6 +212,9 @@ public final class PluginConfig {
         int fMaxZ = c.getInt("ffa.startRegion.max.z", 5);
         this.ffaStartRegion = club.aves.anvildrop.model.ArenaCuboid.normalized(ffaWorld, fMinX, fMinY, fMinZ, fMaxX, fMaxY, fMaxZ);
 
+        this.ffaWorldGuardRegion = c.getString("ffa.worldguard.region", "ffa");
+        this.ffaWorldGuardWorld = c.getString("ffa.worldguard.world", "desertffa");
+
         this.msgPrefix = c.getString("messages.prefix", "&8[&6AnvilDrop&8] &r");
         this.msgNoPerm = c.getString("messages.noPerm", "&cYou don't have permission.");
         this.msgPlayerOnly = c.getString("messages.playerOnly", "&cPlayers only.");
@@ -208,6 +236,12 @@ public final class PluginConfig {
         this.msgReviveAllWarn = c.getString("messages.reviveAllWarn", "&cThis will remove the dead flag from EVERYONE. Type &f/revive all confirm &cwithin 5 seconds.");
         this.msgReviveAllDone = c.getString("messages.reviveAllDone", "&aRevived all dead players.");
         this.msgReviveAllNotAllowed = c.getString("messages.reviveAllNotAllowed", "&c/revive all can only be used in the lobby when no event is active.");
+        this.msgStopAtTooHigh = c.getString("messages.stopAtTooHigh", "&cStop-at must be lower than alive players. Alive: &f{alive}");
+        this.msgEventEnded = c.getString("messages.eventEnded", "&cEvent ended!");
+        this.msgNextRoundChat = c.getString("messages.nextRoundChat", "&aYou are going to the next round!");
+        this.msgNextRoundTitle = c.getString("messages.nextRoundTitle", "&aNext Round");
+        this.msgNextRoundSubtitle = c.getString("messages.nextRoundSubtitle", "&fGet ready!");
+        this.msgNextRoundTitleSeconds = Math.max(1, c.getInt("messages.nextRoundTitleSeconds", 2));
         this.msgDeadUsage = c.getString("messages.deadUsage", "&cUsage: /dead <player>");
         this.msgDeadDone = c.getString("messages.deadDone", "&cMarked &f{player}&c as dead.");
         this.msgChatMutedOn = c.getString("messages.chatMutedOn", "&cChat was muted.");

@@ -53,7 +53,15 @@ public final class ParkourEventCommand implements CommandExecutor {
                     sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start Parkour while AnvilDrop is active."));
                     return true;
                 }
-                boolean ok = parkour.start();
+                Integer stopAt = parseStopAt(args);
+                if (stopAt != null) {
+                    int alive = parkour.getAliveCount();
+                    if (alive <= stopAt) {
+                        sender.sendMessage(Text.color(cfg.msgPrefix + Text.replacePlaceholders(cfg.msgStopAtTooHigh, java.util.Map.of("alive", String.valueOf(alive)))));
+                        return true;
+                    }
+                }
+                boolean ok = parkour.start(stopAt);
                 sender.sendMessage(Text.color(cfg.msgPrefix + (ok
                         ? plugin.getConfig().getString("parkourMessages.started", "&aParkour started! Wall removed.")
                         : "&cParkour event is not open.")));
@@ -69,6 +77,20 @@ public final class ParkourEventCommand implements CommandExecutor {
                 return true;
             }
         }
+    }
+
+    private Integer parseStopAt(String[] args) {
+        for (int i = 0; i < args.length - 1; i++) {
+            if (args[i].equalsIgnoreCase("-stopat")) {
+                try {
+                    int v = Integer.parseInt(args[i + 1]);
+                    return Math.max(1, v);
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 }
 

@@ -13,9 +13,11 @@ import org.bukkit.plugin.Plugin;
 public final class JoinTeleportListener implements Listener {
 
     private final Plugin plugin;
+    private final club.aves.anvildrop.reconnect.ReconnectManager reconnect;
 
-    public JoinTeleportListener(Plugin plugin) {
+    public JoinTeleportListener(Plugin plugin, club.aves.anvildrop.reconnect.ReconnectManager reconnect) {
         this.plugin = plugin;
+        this.reconnect = reconnect;
     }
 
     @EventHandler
@@ -24,6 +26,7 @@ public final class JoinTeleportListener implements Listener {
         if (!cfg.joinTeleportEnabled) return;
 
         Player p = e.getPlayer();
+        if (reconnect != null && reconnect.shouldSkipLobbyTeleport(p)) return;
 
         // Teleport 1 tick later to avoid conflicts with other join handlers/spawn logic.
         Bukkit.getScheduler().runTask(plugin, () -> {

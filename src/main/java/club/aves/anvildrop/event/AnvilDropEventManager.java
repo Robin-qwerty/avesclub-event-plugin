@@ -40,6 +40,7 @@ public final class AnvilDropEventManager implements Listener {
     private BukkitTask countdownTask;
     private BukkitTask dropTask;
     private BukkitTask aliveTask;
+    private BukkitTask timerTask;
 
     private final Set<UUID> participants = new HashSet<>();
     private final Set<UUID> eliminated = new HashSet<>();
@@ -48,6 +49,11 @@ public final class AnvilDropEventManager implements Listener {
     private final Set<UUID> deadDuringThisEvent = new HashSet<>();
 
     private double currentPercent = 0.0;
+    private long startMillis = 0L;
+    private Integer stopAt = null;
+    private boolean ending = false;
+
+    private club.aves.anvildrop.reconnect.ReconnectManager reconnect;
 
     public AnvilDropEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, ModRegistry mods, DeadPermissionService deadPerms) {
         this.plugin = plugin;
@@ -57,8 +63,16 @@ public final class AnvilDropEventManager implements Listener {
         this.scoreboard.startUpdater();
     }
 
+    public void setReconnectManager(club.aves.anvildrop.reconnect.ReconnectManager reconnect) {
+        this.reconnect = reconnect;
+    }
+
     public EventState getState() {
         return state;
+    }
+
+    public boolean isAcceptingJoins() {
+        return state == EventState.OPEN;
     }
 
     public void setOnEventEnd(Runnable onEventEnd) {
@@ -66,7 +80,7 @@ public final class AnvilDropEventManager implements Listener {
     }
 
     public boolean isActive() {
-        return state != EventState.IDLE;
+        return state != EventState.IDLE || ending;
     }
 
     public boolean isDeadDuringThisEvent(UUID uuid) {
@@ -112,6 +126,9 @@ public final class AnvilDropEventManager implements Listener {
         participants.clear();
         eliminated.clear();
         deadDuringThisEvent.clear();
+        stopAt = null;
+        ending = false;
+        scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
         // Set OPEN before teleporting so "already dead -> spectator" logic applies immediately.
         state = EventState.OPEN;
 
@@ -138,6 +155,10 @@ public final class AnvilDropEventManager implements Listener {
     }
 
     public boolean startEvent() {
+        return startEvent(null);
+    }
+
+    public boolean startEvent(Integer stopAt) {
         if (state != EventState.OPEN && state != EventState.PAUSED) return false;
 
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
@@ -146,6 +167,7 @@ public final class AnvilDropEventManager implements Listener {
 
         stopAllTasks();
         state = EventState.COUNTDOWN;
+        this.stopAt = stopAt;
         startAliveUpdater();
 
         // Refresh participants to include anyone currently in event world
@@ -232,6 +254,9 @@ public final class AnvilDropEventManager implements Listener {
         eliminated.clear();
         deadDuringThisEvent.clear();
         state = EventState.IDLE;
+        stopAt = null;
+        ending = false;
+        scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
         updateAliveScoreboard();
         if (onEventEnd != null) {
             try { onEventEnd.run(); } catch (Throwable ignored) {}
@@ -266,6 +291,7 @@ public final class AnvilDropEventManager implements Listener {
         state = EventState.RUNNING;
         currentPercent = cfg.initialPercent;
         startAliveUpdater();
+        startTimer();
 
         dropTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             PluginConfig c = PluginConfig.load(plugin.getConfig());
@@ -316,6 +342,10 @@ public final class AnvilDropEventManager implements Listener {
             aliveTask.cancel();
             aliveTask = null;
         }
+        if (timerTask != null) {
+            timerTask.cancel();
+            timerTask = null;
+        }
     }
 
     public int getAliveCount() {
@@ -332,16 +362,81 @@ public final class AnvilDropEventManager implements Listener {
             }
             if (eliminated.contains(p.getUniqueId()) || deadPerms.isDead(p)) alive--;
         }
+        if (reconnect != null) {
+            alive += reconnect.getPendingAliveForWorld(cfg.eventWorld);
+        }
         return Math.max(0, alive);
+    }
+
+    public boolean isEliminated(UUID uuid) {
+        return uuid != null && eliminated.contains(uuid);
     }
 
     private void updateAliveScoreboard() {
         scoreboard.setAliveCount(getAliveCount());
+        if (stopAt != null) checkStopAt();
     }
 
     private void startAliveUpdater() {
         if (aliveTask != null) return;
         aliveTask = Bukkit.getScheduler().runTaskTimer(plugin, this::updateAliveScoreboard, 1L, 20L);
+    }
+
+    private void startTimer() {
+        if (timerTask != null) {
+            timerTask.cancel();
+            timerTask = null;
+        }
+        startMillis = System.currentTimeMillis();
+        timerTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (state != EventState.RUNNING) return;
+            PluginConfig c = PluginConfig.load(plugin.getConfig());
+            int secs = (int) ((System.currentTimeMillis() - startMillis) / 1000L);
+            scoreboard.setTimeSecondsForWorld(c.eventWorld, secs);
+        }, 0L, 20L);
+    }
+
+    private void checkStopAt() {
+        if (stopAt == null || ending) return;
+        int alive = getAliveCount();
+        if (alive > stopAt) return;
+        endDueToStopAt();
+    }
+
+    private void endDueToStopAt() {
+        ending = true;
+        stopAllTasks(); // stops anvils immediately
+        state = EventState.IDLE;
+
+        PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        World w = Bukkit.getWorld(cfg.eventWorld);
+        if (w != null) {
+            for (Player p : w.getPlayers()) {
+                p.sendMessage(Text.color(cfg.msgPrefix + cfg.msgEventEnded));
+                if (!deadPerms.isDead(p)) {
+                    p.sendMessage(Text.color(cfg.msgPrefix + cfg.msgNextRoundChat));
+                    p.sendTitle(Text.color(cfg.msgNextRoundTitle), Text.color(cfg.msgNextRoundSubtitle), 5, cfg.msgNextRoundTitleSeconds * 20, 5);
+                }
+            }
+        }
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            World lobby = Bukkit.getWorld(cfg.lobbyWorld);
+            Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
+            if (w != null && lobbySpawn != null) {
+                for (Player p : w.getPlayers()) {
+                    p.teleport(lobbySpawn);
+                    p.setGameMode(GameMode.SURVIVAL);
+                }
+            }
+            participants.clear();
+            eliminated.clear();
+            deadDuringThisEvent.clear();
+            stopAt = null;
+            ending = false;
+            scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
+            updateAliveScoreboard();
+        }, 100L);
     }
 
     @EventHandler

@@ -37,6 +37,12 @@ spawns:
     z: 0.5
     yaw: 0.0
     pitch: 0.0
+  ffaSpectator:
+    x: 0.5
+    y: 100.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
 
 ffa:
   startRegion:
@@ -48,6 +54,15 @@ ffa:
       x: 5
       y: 80
       z: 5
+  countdown:
+    seconds: 15
+    chatFormat: "&eFFA starts in &6{seconds}&e..."
+    goTitle: "&aGO!"
+    goSubtitle: "&fFight!"
+    goTitleSeconds: 2
+  worldguard:
+    region: "ffaarea"
+    world: "desertffa"
 
 parkour:
   countdown:
@@ -122,6 +137,7 @@ scoreboard:
   extraTop: []
   lines:
     - "&eAlive: &f{alive}"
+    - "&eTime: &f{time}"
   extraBottom: []
   updateTicks: 20
 
@@ -146,8 +162,20 @@ parkourScoreboard:
     - "&eTime: &f{time}"
   extraBottom: []
 
+ffaScoreboard:
+  enabled: true
+  title: "&c&lFFA"
+  extraTop: []
+  lines:
+    - "&eAlive: &f{alive}"
+    - "&eTime: &f{time}"
+  extraBottom: []
+
 joinTeleport:
   enabled: true
+
+reconnect:
+  graceSeconds: 30
 
 discord:
   link: "https://discord.gg/your-invite"
@@ -221,6 +249,12 @@ messages:
   reviveAllWarn: "&cThis will remove the dead flag from EVERYONE. Type &f/revive all confirm &cwithin 5 seconds."
   reviveAllDone: "&aRevived all dead players."
   reviveAllNotAllowed: "&c/revive all can only be used in the lobby when no event is active."
+  stopAtTooHigh: "&cStop-at must be lower than alive players. Alive: &f{alive}"
+  eventEnded: "&cEvent ended!"
+  nextRoundChat: "&aYou are going to the next round!"
+  nextRoundTitle: "&aNext Round"
+  nextRoundSubtitle: "&fGet ready!"
+  nextRoundTitleSeconds: 2
   deadUsage: "&cUsage: /dead <player>"
   deadDone: "&cMarked &f{player}&c as dead."
   chatMutedOn: "&cChat was muted."

@@ -53,6 +53,15 @@ public final class DeadPermissionService {
                 .setPermission(permission, true);
     }
 
+    public void markDeadUuid(UUID uuid) {
+        if (uuid == null) return;
+        addDeadUuid(uuid);
+        if (hasLuckPerms()) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
+                    "lp user " + uuid + " permission set " + perm() + " true");
+        }
+    }
+
     public void clearDead(Player player) {
         if (player == null) return;
         String permission = perm();

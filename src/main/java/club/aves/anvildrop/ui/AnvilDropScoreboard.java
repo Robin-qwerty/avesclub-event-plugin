@@ -103,7 +103,10 @@ public final class AnvilDropScoreboard implements Listener {
         if (world.equalsIgnoreCase(cfg.eventWorld) && cfg.scoreboardEnabled) {
             List<String> raw = cfg.scoreboardLines;
             setSidebar(sb, "aves_event", Text.color(cfg.scoreboardTitle),
-                    replaceAll(raw, Map.of("alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0)))));
+                    replaceAll(raw, Map.of(
+                            "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0)),
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0))
+                    )));
             return;
         }
 
@@ -113,6 +116,15 @@ public final class AnvilDropScoreboard implements Listener {
                             "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
                             "finished", String.valueOf(finishedCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
                             "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0))
+                    )));
+            return;
+        }
+
+        if (world.equalsIgnoreCase(cfg.ffaWorld) && cfg.ffaScoreboardEnabled) {
+            setSidebar(sb, "aves_ffa", Text.color(cfg.ffaScoreboardTitle),
+                    replaceAll(cfg.ffaScoreboardLines, Map.of(
+                            "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.ffaWorld.toLowerCase(), 0)),
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.ffaWorld.toLowerCase(), 0))
                     )));
             return;
         }
@@ -128,7 +140,7 @@ public final class AnvilDropScoreboard implements Listener {
 
         // Other worlds: hide our sidebar
         Objective cur = sb.getObjective(DisplaySlot.SIDEBAR);
-        if (cur != null && (cur.getName().equals("aves_event") || cur.getName().equals("aves_lobby") || cur.getName().equals("aves_parkour"))) {
+        if (cur != null && (cur.getName().equals("aves_event") || cur.getName().equals("aves_lobby") || cur.getName().equals("aves_parkour") || cur.getName().equals("aves_ffa"))) {
             cur.unregister();
         }
     }
