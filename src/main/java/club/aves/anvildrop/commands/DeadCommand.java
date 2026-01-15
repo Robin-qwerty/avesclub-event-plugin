@@ -45,7 +45,7 @@ public final class DeadCommand implements CommandExecutor {
             return true;
         }
 
-        if (!mods.isMod(target.getUniqueId())) {
+        if (!mods.isMod(target.getUniqueId()) && !target.hasPermission("event.admin")) {
             deadPerms.markDead(target);
         }
 

@@ -150,6 +150,7 @@ public final class AnvilDropEventManager implements Listener {
             int fadeOut = 10;
             p.sendTitle(Text.color(cfg.openTitle), Text.color(cfg.openSubtitle), fadeIn, stay, fadeOut);
         }
+        broadcastEventOpened(cfg);
         startAliveUpdater();
         return true;
     }
@@ -168,6 +169,7 @@ public final class AnvilDropEventManager implements Listener {
         stopAllTasks();
         state = EventState.COUNTDOWN;
         this.stopAt = stopAt;
+        scoreboard.setStopAtForWorld(cfg.eventWorld, stopAt);
         startAliveUpdater();
 
         // Refresh participants to include anyone currently in event world
@@ -257,7 +259,9 @@ public final class AnvilDropEventManager implements Listener {
         stopAt = null;
         ending = false;
         scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
+        scoreboard.setStopAtForWorld(cfg.eventWorld, null);
         updateAliveScoreboard();
+        broadcastEventEnded(cfg);
         if (onEventEnd != null) {
             try { onEventEnd.run(); } catch (Throwable ignored) {}
         }
@@ -409,6 +413,7 @@ public final class AnvilDropEventManager implements Listener {
         state = EventState.IDLE;
 
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        broadcastEventEnded(cfg);
         World w = Bukkit.getWorld(cfg.eventWorld);
         if (w != null) {
             for (Player p : w.getPlayers()) {
@@ -435,8 +440,23 @@ public final class AnvilDropEventManager implements Listener {
             stopAt = null;
             ending = false;
             scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
+            scoreboard.setStopAtForWorld(cfg.eventWorld, null);
             updateAliveScoreboard();
         }, 100L);
+    }
+
+    private void broadcastEventOpened(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.opened", "&a{event} is opened");
+        String name = plugin.getConfig().getString("eventBroadcast.names.anvildrop", "AnvilDrop");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
+    }
+
+    private void broadcastEventEnded(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.ended", "&c{event} has ended");
+        String name = plugin.getConfig().getString("eventBroadcast.names.anvildrop", "AnvilDrop");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
     }
 
     @EventHandler
@@ -446,6 +466,7 @@ public final class AnvilDropEventManager implements Listener {
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         Player p = e.getEntity();
         if (!p.getWorld().getName().equalsIgnoreCase(cfg.eventWorld)) return;
+        if (p.hasPermission("event.admin")) return;
         if (mods.isMod(p.getUniqueId())) return;
         eliminated.add(p.getUniqueId());
         deadDuringThisEvent.add(p.getUniqueId());

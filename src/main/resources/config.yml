@@ -95,6 +95,10 @@ parkour:
       x: 0
       y: 82
       z: 12
+  finish:
+    title: "&aYou finished the parkour successfully!"
+    subtitle: "&fYou're going to the next round"
+    titleSeconds: 3
 
 # Arena cuboid bounds in the EVENT WORLD.
 # You can set this via /anvildrop setarena (requires WorldEdit selection).
@@ -263,6 +267,15 @@ messages:
   voiceMutedOn: "&cVoice chat was muted."
   voiceMutedOff: "&aVoice chat was unmuted."
 
+# Broadcast messages for event open/end (sent to all online players)
+eventBroadcast:
+  opened: "&a{event} is opened"
+  ended: "&c{event} has ended"
+  names:
+    anvildrop: "AnvilDrop"
+    parkour: "Parkour"
+    ffa: "FFA"
+
 voiceMute:
   enabled: false
   group: "default"
@@ -272,6 +285,7 @@ parkourMessages:
   opened: "&aParkour event opened!"
   started: "&aParkour started! Wall removed."
   stopped: "&cParkour stopped! Wall placed."
+  playerFinished: "&a{player} &7finished the parkour! &7(&f{pkfinished}&7 finished)"
 
 ffaMessages:
   opened: "&aFFA event opened!"

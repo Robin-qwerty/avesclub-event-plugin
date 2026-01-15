@@ -23,7 +23,7 @@ public final class ReconnectManager implements Listener {
 
     private enum EventKind { ANVIL, PARKOUR, FFA }
 
-    private record Pending(EventKind kind, Location location, long expiresAtMillis, boolean countAsAlive, BukkitTask task) {}
+    private record Pending(EventKind kind, Location location, long expiresAtMillis, boolean countAsAlive, boolean markDeadOnExpire, BukkitTask task) {}
 
     private final Plugin plugin;
     private final DeadPermissionService deadPerms;
@@ -32,6 +32,7 @@ public final class ReconnectManager implements Listener {
     private final FFAEventManager ffa;
 
     private final Map<UUID, Pending> pending = new HashMap<>();
+    private final Map<UUID, Long> restoringUntil = new HashMap<>();
 
     public ReconnectManager(Plugin plugin,
                             DeadPermissionService deadPerms,
@@ -47,6 +48,8 @@ public final class ReconnectManager implements Listener {
 
     public boolean shouldSkipLobbyTeleport(Player p) {
         if (p == null) return false;
+        Long until = restoringUntil.get(p.getUniqueId());
+        if (until != null && System.currentTimeMillis() <= until) return true;
         Pending pen = pending.get(p.getUniqueId());
         if (pen == null) return false;
         long now = System.currentTimeMillis();
@@ -95,6 +98,7 @@ public final class ReconnectManager implements Listener {
         // Only treat them as "alive during grace" if they were alive when leaving.
         boolean countAsAlive = true;
         UUID id = p.getUniqueId();
+        boolean markDeadOnExpire = !p.hasPermission("event.admin");
         if (p.hasPermission("event.admin")) countAsAlive = false;
         if (deadPerms.isDead(p)) countAsAlive = false;
         if (kind == EventKind.ANVIL && anvil != null && anvil.isEliminated(id)) countAsAlive = false;
@@ -113,12 +117,14 @@ public final class ReconnectManager implements Listener {
             Pending pen = pending.remove(p.getUniqueId());
             if (pen == null) return;
             // If they didn't rejoin in time -> dead (even if the event ended in between)
-            deadPerms.markDeadUuid(p.getUniqueId());
+            if (pen.markDeadOnExpire) {
+                deadPerms.markDeadUuid(p.getUniqueId());
+            }
             // Trigger alive refresh
             triggerAliveRefresh(pen.kind);
         }, grace * 20L);
 
-        pending.put(p.getUniqueId(), new Pending(kind, loc, expiresAt, countAsAlive, task));
+        pending.put(p.getUniqueId(), new Pending(kind, loc, expiresAt, countAsAlive, markDeadOnExpire, task));
         triggerAliveRefresh(kind);
     }
 
@@ -135,22 +141,24 @@ public final class ReconnectManager implements Listener {
         boolean within = now <= pen.expiresAtMillis;
 
         if (!within) {
-            deadPerms.markDead(p);
+            if (!p.hasPermission("event.admin")) deadPerms.markDead(p);
             triggerAliveRefresh(pen.kind);
             return;
         }
 
         // If the event ended while they were gone -> dead
         if (!isEventStillActive(pen.kind)) {
-            deadPerms.markDead(p);
+            if (!p.hasPermission("event.admin")) deadPerms.markDead(p);
             triggerAliveRefresh(pen.kind);
             return;
         }
 
         // Restore location (1 tick later so join-spawn handlers don't override)
+        restoringUntil.put(p.getUniqueId(), System.currentTimeMillis() + 5000L);
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!p.isOnline()) return;
             p.teleport(pen.location);
+            restoringUntil.remove(p.getUniqueId());
             triggerAliveRefresh(pen.kind);
         });
     }

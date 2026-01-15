@@ -30,6 +30,7 @@ public final class AnvilDropScoreboard implements Listener {
     private final Map<String, Integer> aliveCountsByWorld = new HashMap<>();
     private final Map<String, Integer> timeSecondsByWorld = new HashMap<>();
     private final Map<String, Integer> finishedCountsByWorld = new HashMap<>();
+    private final Map<String, Integer> stopAtByWorld = new HashMap<>();
 
     public AnvilDropScoreboard(Plugin plugin) {
         this.plugin = plugin;
@@ -53,6 +54,16 @@ public final class AnvilDropScoreboard implements Listener {
     public void setFinishedCountForWorld(String worldName, int finished) {
         if (worldName == null) return;
         finishedCountsByWorld.put(worldName.toLowerCase(), Math.max(0, finished));
+    }
+
+    public void setStopAtForWorld(String worldName, Integer stopAt) {
+        if (worldName == null) return;
+        String k = worldName.toLowerCase();
+        if (stopAt == null) {
+            stopAtByWorld.remove(k);
+        } else {
+            stopAtByWorld.put(k, Math.max(1, stopAt));
+        }
     }
 
     public void startUpdater() {
@@ -105,7 +116,9 @@ public final class AnvilDropScoreboard implements Listener {
             setSidebar(sb, "aves_event", Text.color(cfg.scoreboardTitle),
                     replaceAll(raw, Map.of(
                             "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0)),
-                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0))
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.eventWorld.toLowerCase(), 0)),
+                            "stopat", stopAtString(cfg.eventWorld),
+                            "/stopat", slashStopAtString(cfg.eventWorld)
                     )));
             return;
         }
@@ -115,7 +128,9 @@ public final class AnvilDropScoreboard implements Listener {
                     replaceAll(cfg.parkourScoreboardLines, Map.of(
                             "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
                             "finished", String.valueOf(finishedCountsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
-                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0))
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.parkourWorld.toLowerCase(), 0)),
+                            "stopat", stopAtString(cfg.parkourWorld),
+                            "/stopat", slashStopAtString(cfg.parkourWorld)
                     )));
             return;
         }
@@ -124,7 +139,9 @@ public final class AnvilDropScoreboard implements Listener {
             setSidebar(sb, "aves_ffa", Text.color(cfg.ffaScoreboardTitle),
                     replaceAll(cfg.ffaScoreboardLines, Map.of(
                             "alive", String.valueOf(aliveCountsByWorld.getOrDefault(cfg.ffaWorld.toLowerCase(), 0)),
-                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.ffaWorld.toLowerCase(), 0))
+                            "time", formatTime(timeSecondsByWorld.getOrDefault(cfg.ffaWorld.toLowerCase(), 0)),
+                            "stopat", stopAtString(cfg.ffaWorld),
+                            "/stopat", slashStopAtString(cfg.ffaWorld)
                     )));
             return;
         }
@@ -156,6 +173,18 @@ public final class AnvilDropScoreboard implements Listener {
         int m = s / 60;
         int r = s % 60;
         return String.format("%02d:%02d", m, r);
+    }
+
+    private String stopAtString(String worldName) {
+        if (worldName == null) return "";
+        Integer v = stopAtByWorld.get(worldName.toLowerCase());
+        return v == null ? "" : String.valueOf(v);
+    }
+
+    private String slashStopAtString(String worldName) {
+        if (worldName == null) return "";
+        Integer v = stopAtByWorld.get(worldName.toLowerCase());
+        return v == null ? "" : ("/" + v);
     }
 
     /**

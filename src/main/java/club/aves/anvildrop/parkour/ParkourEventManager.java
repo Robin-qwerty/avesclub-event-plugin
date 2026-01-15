@@ -101,6 +101,7 @@ public final class ParkourEventManager implements Listener {
         scoreboard.setAliveCountForWorld(cfg.parkourWorld, getAliveCount());
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
         scoreboard.setFinishedCountForWorld(cfg.parkourWorld, finished.size());
+        broadcastEventOpened(cfg);
         return true;
     }
 
@@ -112,6 +113,7 @@ public final class ParkourEventManager implements Listener {
         if (state != ParkourEventState.OPEN) return false;
         if (countdownTask != null) return false;
         this.stopAt = stopAt;
+        scoreboard.setStopAtForWorld(PluginConfig.load(plugin.getConfig()).parkourWorld, stopAt);
         int seconds = Math.max(0, plugin.getConfig().getInt("parkour.countdown.seconds", 5));
 
         if (seconds <= 0) {
@@ -211,6 +213,8 @@ public final class ParkourEventManager implements Listener {
         }
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
         scoreboard.setFinishedCountForWorld(cfg.parkourWorld, 0);
+        scoreboard.setStopAtForWorld(cfg.parkourWorld, null);
+        broadcastEventEnded(cfg);
         updateAlive();
     }
 
@@ -296,6 +300,7 @@ public final class ParkourEventManager implements Listener {
         Player p = e.getEntity();
         if (!p.getWorld().getName().equalsIgnoreCase(cfg.parkourWorld)) return;
         if (state != ParkourEventState.RUNNING) return;
+        if (p.hasPermission("event.admin")) return;
 
         eliminated.add(p.getUniqueId());
         if (deadPerms != null) deadPerms.markDead(p);
@@ -322,6 +327,7 @@ public final class ParkourEventManager implements Listener {
         state = ParkourEventState.IDLE;
 
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+        broadcastEventEnded(cfg);
         World w = Bukkit.getWorld(cfg.parkourWorld);
         if (w != null) {
             for (Player p : w.getPlayers()) {
@@ -349,8 +355,23 @@ public final class ParkourEventManager implements Listener {
             ending = false;
             scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
             scoreboard.setFinishedCountForWorld(cfg.parkourWorld, 0);
+            scoreboard.setStopAtForWorld(cfg.parkourWorld, null);
             updateAlive();
         }, 100L);
+    }
+
+    private void broadcastEventOpened(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.opened", "&a{event} is opened");
+        String name = plugin.getConfig().getString("eventBroadcast.names.parkour", "Parkour");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
+    }
+
+    private void broadcastEventEnded(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.ended", "&c{event} has ended");
+        String name = plugin.getConfig().getString("eventBroadcast.names.parkour", "Parkour");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
     }
 
     @EventHandler
@@ -391,6 +412,20 @@ public final class ParkourEventManager implements Listener {
             finished.add(p.getUniqueId());
             p.setGameMode(GameMode.SPECTATOR);
             settingsUI.removeCompass(p);
+            // Per-player finish title/subtitle
+            String title = plugin.getConfig().getString("parkour.finish.title", "&aYou finished the parkour successfully!");
+            String subtitle = plugin.getConfig().getString("parkour.finish.subtitle", "&fYou're going to the next round");
+            int secs = Math.max(1, plugin.getConfig().getInt("parkour.finish.titleSeconds", 3));
+            p.sendTitle(Text.color(title), Text.color(subtitle), 5, secs * 20, 5);
+
+            // Broadcast finish message to everyone
+            String fmt = plugin.getConfig().getString("parkourMessages.playerFinished", "&a{player} &7finished the parkour! &7(&f{pkfinished}&7 finished)");
+            String msg = Text.color(Text.replacePlaceholders(fmt, java.util.Map.of(
+                    "player", p.getName(),
+                    "pkfinished", String.valueOf(finished.size())
+            )));
+            Bukkit.broadcastMessage(Text.color(cfg.msgPrefix) + msg);
+
             updateAlive();
         }
     }

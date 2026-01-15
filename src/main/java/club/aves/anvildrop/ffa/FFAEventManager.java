@@ -9,6 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -83,6 +84,7 @@ public final class FFAEventManager implements Listener {
         ending = false;
         state = FFAEventState.OPEN;
         setPvp(false);
+        clearGroundItems(ffa);
         scoreboard.setTimeSecondsForWorld(cfg.ffaWorld, 0);
 
         // Teleport lobby players into FFA open spawn
@@ -91,6 +93,7 @@ public final class FFAEventManager implements Listener {
             p.teleport(cfg.ffaOpenSpawn);
             p.setGameMode(GameMode.SURVIVAL);
         }
+        broadcastEventOpened(cfg);
         updateAlive();
         return true;
     }
@@ -110,12 +113,24 @@ public final class FFAEventManager implements Listener {
         setPvp(false);
         this.stopAt = stopAt;
         this.ending = false;
+        scoreboard.setStopAtForWorld(cfg.ffaWorld, stopAt);
 
         // Teleport + kit immediately, then countdown, then enable pvp
         for (UUID id : Set.copyOf(participants)) {
             Player p = Bukkit.getPlayer(id);
             if (p == null) continue;
             if (!p.getWorld().getName().equalsIgnoreCase(cfg.ffaWorld)) continue;
+            // Requirement: if marked dead, do NOT give kit and put them in spectator at ffaSpectator spawn.
+            if (deadPerms != null && deadPerms.isDead(p) && !p.hasPermission("event.admin")) {
+                eliminated.add(p.getUniqueId());
+                clearInventory(p);
+                if (cfg.ffaSpectatorSpawn != null) {
+                    p.teleport(cfg.ffaSpectatorSpawn);
+                }
+                p.setGameMode(GameMode.SPECTATOR);
+                continue;
+            }
+
             p.setGameMode(GameMode.SURVIVAL);
             Location spawn = randomInRegion(cfg.ffaStartRegion, ffa);
             if (spawn != null) p.teleport(spawn);
@@ -177,6 +192,7 @@ public final class FFAEventManager implements Listener {
         stopTimer();
         stopAt = null;
         ending = false;
+        if (ffa != null) clearGroundItems(ffa);
         if (ffa != null && lobbySpawn != null) {
             for (Player p : ffa.getPlayers()) {
                 clearInventory(p);
@@ -187,6 +203,8 @@ public final class FFAEventManager implements Listener {
         participants.clear();
         eliminated.clear();
         state = FFAEventState.IDLE;
+        broadcastEventEnded(cfg);
+        scoreboard.setStopAtForWorld(cfg.ffaWorld, null);
         scoreboard.setTimeSecondsForWorld(cfg.ffaWorld, 0);
         updateAlive();
     }
@@ -214,6 +232,10 @@ public final class FFAEventManager implements Listener {
         int alive = w.getPlayers().size();
         for (Player p : w.getPlayers()) {
             if (p.hasPermission("event.admin")) {
+                alive--;
+                continue;
+            }
+            if (deadPerms != null && deadPerms.isDead(p)) {
                 alive--;
                 continue;
             }
@@ -312,6 +334,8 @@ public final class FFAEventManager implements Listener {
 
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         World w = Bukkit.getWorld(cfg.ffaWorld);
+        if (w != null) clearGroundItems(w);
+        broadcastEventEnded(cfg);
         if (w != null) {
             // Broadcast end
             for (Player p : w.getPlayers()) {
@@ -328,6 +352,7 @@ public final class FFAEventManager implements Listener {
             World lobby = Bukkit.getWorld(cfg.lobbyWorld);
             Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
             if (w != null && lobbySpawn != null) {
+                clearGroundItems(w);
                 for (Player p : w.getPlayers()) {
                     clearInventory(p);
                     p.teleport(lobbySpawn);
@@ -338,9 +363,31 @@ public final class FFAEventManager implements Listener {
             eliminated.clear();
             stopAt = null;
             ending = false;
+            scoreboard.setStopAtForWorld(cfg.ffaWorld, null);
             scoreboard.setTimeSecondsForWorld(cfg.ffaWorld, 0);
             updateAlive();
         }, 100L);
+    }
+
+    private void clearGroundItems(World w) {
+        if (w == null) return;
+        for (Item it : w.getEntitiesByClass(Item.class)) {
+            it.remove();
+        }
+    }
+
+    private void broadcastEventOpened(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.opened", "&a{event} is opened");
+        String name = plugin.getConfig().getString("eventBroadcast.names.ffa", "FFA");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
+    }
+
+    private void broadcastEventEnded(PluginConfig cfg) {
+        String fmt = plugin.getConfig().getString("eventBroadcast.ended", "&c{event} has ended");
+        String name = plugin.getConfig().getString("eventBroadcast.names.ffa", "FFA");
+        String msg = Text.replacePlaceholders(fmt, java.util.Map.of("event", name));
+        Bukkit.broadcastMessage(Text.color(cfg.msgPrefix + msg));
     }
 
     private static void clearInventory(Player p) {
