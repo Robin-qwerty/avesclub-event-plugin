@@ -67,6 +67,7 @@ public final class EventAccessListener implements Listener {
     @EventHandler
     public void onTeleport(PlayerTeleportEvent e) {
         if (e.getTo() == null || e.getTo().getWorld() == null) return;
+        if (e.getPlayer().hasPermission("event.admin")) return;
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         String toWorld = e.getTo().getWorld().getName();
 
@@ -85,6 +86,7 @@ public final class EventAccessListener implements Listener {
 
     private void enforceNoPlayersInInactiveEventWorld(Player p) {
         if (p == null || !p.isOnline() || p.getWorld() == null) return;
+        if (p.hasPermission("event.admin")) return;
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         String w = p.getWorld().getName();
 
