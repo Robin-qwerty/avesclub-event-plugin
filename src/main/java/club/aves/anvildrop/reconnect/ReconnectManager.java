@@ -5,7 +5,9 @@ import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.parkour.ParkourEventManager;
+import club.aves.anvildrop.spleef.SpleefEventManager;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,6 +16,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +24,7 @@ import java.util.UUID;
 
 public final class ReconnectManager implements Listener {
 
-    private enum EventKind { ANVIL, PARKOUR, FFA }
+    private enum EventKind { ANVIL, PARKOUR, FFA, SPLEEF }
 
     private record Pending(EventKind kind, Location location, long expiresAtMillis, boolean countAsAlive, boolean markDeadOnExpire, BukkitTask task) {}
 
@@ -30,6 +33,7 @@ public final class ReconnectManager implements Listener {
     private final AnvilDropEventManager anvil;
     private final ParkourEventManager parkour;
     private final FFAEventManager ffa;
+    private final SpleefEventManager spleef;
 
     private final Map<UUID, Pending> pending = new HashMap<>();
     private final Map<UUID, Long> restoringUntil = new HashMap<>();
@@ -38,12 +42,14 @@ public final class ReconnectManager implements Listener {
                             DeadPermissionService deadPerms,
                             AnvilDropEventManager anvil,
                             ParkourEventManager parkour,
-                            FFAEventManager ffa) {
+                            FFAEventManager ffa,
+                            SpleefEventManager spleef) {
         this.plugin = plugin;
         this.deadPerms = deadPerms;
         this.anvil = anvil;
         this.parkour = parkour;
         this.ffa = ffa;
+        this.spleef = spleef;
     }
 
     public boolean shouldSkipLobbyTeleport(Player p) {
@@ -68,6 +74,7 @@ public final class ReconnectManager implements Listener {
         if (worldName.equalsIgnoreCase(cfg.eventWorld)) kind = EventKind.ANVIL;
         else if (worldName.equalsIgnoreCase(cfg.parkourWorld)) kind = EventKind.PARKOUR;
         else if (worldName.equalsIgnoreCase(cfg.ffaWorld)) kind = EventKind.FFA;
+        else if (worldName.equalsIgnoreCase(cfg.spleefWorld)) kind = EventKind.SPLEEF;
         if (kind == null) return 0;
 
         long now = System.currentTimeMillis();
@@ -92,6 +99,7 @@ public final class ReconnectManager implements Listener {
         if (w.equalsIgnoreCase(cfg.eventWorld) && anvil != null && anvil.isActive()) kind = EventKind.ANVIL;
         else if (w.equalsIgnoreCase(cfg.parkourWorld) && parkour != null && parkour.isActive()) kind = EventKind.PARKOUR;
         else if (w.equalsIgnoreCase(cfg.ffaWorld) && ffa != null && ffa.isActive()) kind = EventKind.FFA;
+        else if (w.equalsIgnoreCase(cfg.spleefWorld) && spleef != null && spleef.isActive()) kind = EventKind.SPLEEF;
 
         if (kind == null) return;
 
@@ -104,6 +112,7 @@ public final class ReconnectManager implements Listener {
         if (kind == EventKind.ANVIL && anvil != null && anvil.isEliminated(id)) countAsAlive = false;
         if (kind == EventKind.PARKOUR && parkour != null && (parkour.isEliminated(id) || parkour.isFinished(id))) countAsAlive = false;
         if (kind == EventKind.FFA && ffa != null && ffa.isEliminated(id)) countAsAlive = false;
+        if (kind == EventKind.SPLEEF && spleef != null && spleef.isEliminated(id)) countAsAlive = false;
 
         int grace = Math.max(1, plugin.getConfig().getInt("reconnect.graceSeconds", 30));
         long expiresAt = System.currentTimeMillis() + (grace * 1000L);
@@ -141,14 +150,30 @@ public final class ReconnectManager implements Listener {
         boolean within = now <= pen.expiresAtMillis;
 
         if (!within) {
-            if (!p.hasPermission("event.admin")) deadPerms.markDead(p);
+            if (!p.hasPermission("event.admin")) {
+                deadPerms.markDead(p);
+                // Requirement: if they rejoin after expiry (event context), clear items once they're in lobby
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (!p.isOnline()) return;
+                    clearAllItems(p);
+                    p.setGameMode(GameMode.SURVIVAL);
+                }, 2L);
+            }
             triggerAliveRefresh(pen.kind);
             return;
         }
 
         // If the event ended while they were gone -> dead
         if (!isEventStillActive(pen.kind)) {
-            if (!p.hasPermission("event.admin")) deadPerms.markDead(p);
+            if (!p.hasPermission("event.admin")) {
+                deadPerms.markDead(p);
+                // Requirement: event ended while away; on join in lobby clear items
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (!p.isOnline()) return;
+                    clearAllItems(p);
+                    p.setGameMode(GameMode.SURVIVAL);
+                }, 2L);
+            }
             triggerAliveRefresh(pen.kind);
             return;
         }
@@ -158,6 +183,16 @@ public final class ReconnectManager implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!p.isOnline()) return;
             p.teleport(pen.location);
+            // Requirement: if dead status is true and they rejoin an active event, they must be spectator.
+            if (!p.hasPermission("event.admin") && deadPerms.isDead(p)) {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (!p.isOnline()) return;
+                    PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+                    if (p.getWorld() != null && !p.getWorld().getName().equalsIgnoreCase(cfg.lobbyWorld)) {
+                        p.setGameMode(GameMode.SPECTATOR);
+                    }
+                }, 1L);
+            }
             restoringUntil.remove(p.getUniqueId());
             triggerAliveRefresh(pen.kind);
         });
@@ -168,6 +203,7 @@ public final class ReconnectManager implements Listener {
             case ANVIL -> anvil != null && anvil.isActive();
             case PARKOUR -> parkour != null && parkour.isActive();
             case FFA -> ffa != null && ffa.isActive();
+            case SPLEEF -> spleef != null && spleef.isActive();
         };
     }
 
@@ -184,8 +220,20 @@ public final class ReconnectManager implements Listener {
                 case FFA -> {
                     if (ffa != null) ffa.refreshAliveCount();
                 }
+                case SPLEEF -> {
+                    if (spleef != null) spleef.refreshAliveCount();
+                }
             }
         });
+    }
+
+    private static void clearAllItems(Player p) {
+        if (p == null) return;
+        var inv = p.getInventory();
+        inv.clear();
+        inv.setArmorContents(new ItemStack[0]);
+        inv.setItemInOffHand(null);
+        p.updateInventory();
     }
 }
 

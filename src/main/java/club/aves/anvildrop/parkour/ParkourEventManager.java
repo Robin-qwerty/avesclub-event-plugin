@@ -44,6 +44,9 @@ public final class ParkourEventManager implements Listener {
 
     private club.aves.anvildrop.reconnect.ReconnectManager reconnect;
 
+    private BukkitTask openIdleTask;
+    private int openIdleSeconds = 0;
+
     public ParkourEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, EventSettingsUI settingsUI, DeadPermissionService deadPerms) {
         this.plugin = plugin;
         this.scoreboard = scoreboard;
@@ -78,6 +81,7 @@ public final class ParkourEventManager implements Listener {
         stopAt = null;
         ending = false;
         state = ParkourEventState.OPEN;
+        stopOpenIdleWatchdog();
         startMillis = 0L;
         if (timerTask != null) {
             timerTask.cancel();
@@ -102,6 +106,7 @@ public final class ParkourEventManager implements Listener {
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
         scoreboard.setFinishedCountForWorld(cfg.parkourWorld, finished.size());
         broadcastEventOpened(cfg);
+        startOpenIdleWatchdog();
         return true;
     }
 
@@ -114,6 +119,7 @@ public final class ParkourEventManager implements Listener {
         if (countdownTask != null) return false;
         this.stopAt = stopAt;
         scoreboard.setStopAtForWorld(PluginConfig.load(plugin.getConfig()).parkourWorld, stopAt);
+        stopOpenIdleWatchdog();
         int seconds = Math.max(0, plugin.getConfig().getInt("parkour.countdown.seconds", 5));
 
         if (seconds <= 0) {
@@ -186,23 +192,14 @@ public final class ParkourEventManager implements Listener {
         World lobby = Bukkit.getWorld(cfg.lobbyWorld);
         Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
 
+        if (ending) return;
+        ending = true;
+
         // Place wall back
         placeWall(true);
 
-        if (parkour != null && lobbySpawn != null) {
-            for (Player p : parkour.getPlayers()) {
-                p.teleport(lobbySpawn);
-                p.setGameMode(GameMode.SURVIVAL);
-                settingsUI.removeCompass(p);
-            }
-        }
-
-        eliminated.clear();
-        finished.clear();
-        state = ParkourEventState.IDLE;
-        stopAt = null;
-        ending = false;
-        startMillis = 0L;
+        // Stop timers immediately, then delay teleport for clarity
+        stopOpenIdleWatchdog();
         if (timerTask != null) {
             timerTask.cancel();
             timerTask = null;
@@ -211,11 +208,88 @@ public final class ParkourEventManager implements Listener {
             countdownTask.cancel();
             countdownTask = null;
         }
+        state = ParkourEventState.IDLE;
+        stopAt = null;
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
         scoreboard.setFinishedCountForWorld(cfg.parkourWorld, 0);
         scoreboard.setStopAtForWorld(cfg.parkourWorld, null);
         broadcastEventEnded(cfg);
         updateAlive();
+
+        // Extra stop-grace messaging (configurable)
+        if (parkour != null) {
+            String endedFmt = plugin.getConfig().getString("stopGrace.endedChat", "&c{event} has ended!");
+            String nextFmt = plugin.getConfig().getString("stopGrace.nextRoundChat", "&aYou're going to the next round!");
+            String eventName = plugin.getConfig().getString("eventBroadcast.names.parkour", "Parkour");
+            String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
+            String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            for (Player p : parkour.getPlayers()) {
+                p.sendMessage(endedMsg);
+                if (!p.hasPermission("event.admin") && (deadPerms == null || !deadPerms.isDead(p))) {
+                    p.sendMessage(nextMsg);
+                }
+            }
+        }
+
+        if (parkour != null) {
+            for (Player p : parkour.getPlayers()) {
+                p.setInvulnerable(true);
+            }
+        }
+
+        int delay = Math.max(0, plugin.getConfig().getInt("stopGrace.seconds", 3));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (parkour != null && lobbySpawn != null) {
+                for (Player p : parkour.getPlayers()) {
+                    p.setInvulnerable(false);
+                    p.teleport(lobbySpawn);
+                    p.setGameMode(GameMode.SURVIVAL);
+                    settingsUI.removeCompass(p);
+                }
+            }
+            if (parkour != null) {
+                for (Player p : parkour.getPlayers()) {
+                    p.setInvulnerable(false);
+                }
+            }
+            eliminated.clear();
+            finished.clear();
+            ending = false;
+            startMillis = 0L;
+            updateAlive();
+        }, delay * 20L);
+    }
+
+    private void startOpenIdleWatchdog() {
+        stopOpenIdleWatchdog();
+        openIdleSeconds = 0;
+        openIdleTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (state != ParkourEventState.OPEN) {
+                stopOpenIdleWatchdog();
+                return;
+            }
+            PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+            World w = Bukkit.getWorld(cfg.parkourWorld);
+            boolean serverEmpty = Bukkit.getOnlinePlayers().isEmpty();
+            boolean worldEmpty = (w == null || w.getPlayers().isEmpty());
+            if (serverEmpty || worldEmpty) {
+                openIdleSeconds++;
+            } else {
+                openIdleSeconds = 0;
+            }
+            int limit = Math.max(5, plugin.getConfig().getInt("autoStop.openEmptySeconds", 30));
+            if (openIdleSeconds >= limit) {
+                stop();
+            }
+        }, 20L, 20L);
+    }
+
+    private void stopOpenIdleWatchdog() {
+        if (openIdleTask != null) {
+            openIdleTask.cancel();
+            openIdleTask = null;
+        }
+        openIdleSeconds = 0;
     }
 
     private void updateAlive() {
@@ -412,6 +486,8 @@ public final class ParkourEventManager implements Listener {
             finished.add(p.getUniqueId());
             p.setGameMode(GameMode.SPECTATOR);
             settingsUI.removeCompass(p);
+            // If they had "hide players" enabled, disable it now so spectators can see everyone again.
+            settingsUI.forceShowPlayers(p);
             // Per-player finish title/subtitle
             String title = plugin.getConfig().getString("parkour.finish.title", "&aYou finished the parkour successfully!");
             String subtitle = plugin.getConfig().getString("parkour.finish.subtitle", "&fYou're going to the next round");

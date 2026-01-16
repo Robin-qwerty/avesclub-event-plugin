@@ -55,6 +55,9 @@ public final class AnvilDropEventManager implements Listener {
 
     private club.aves.anvildrop.reconnect.ReconnectManager reconnect;
 
+    private BukkitTask openIdleTask;
+    private int openIdleSeconds = 0;
+
     public AnvilDropEventManager(Plugin plugin, AnvilDropScoreboard scoreboard, ModRegistry mods, DeadPermissionService deadPerms) {
         this.plugin = plugin;
         this.scoreboard = scoreboard;
@@ -123,6 +126,7 @@ public final class AnvilDropEventManager implements Listener {
         if (cfg.eventSpawn == null) return false;
 
         stopAllTasks();
+        stopOpenIdleWatchdog();
         participants.clear();
         eliminated.clear();
         deadDuringThisEvent.clear();
@@ -152,6 +156,7 @@ public final class AnvilDropEventManager implements Listener {
         }
         broadcastEventOpened(cfg);
         startAliveUpdater();
+        startOpenIdleWatchdog();
         return true;
     }
 
@@ -167,6 +172,7 @@ public final class AnvilDropEventManager implements Listener {
         if (event == null) return false;
 
         stopAllTasks();
+        stopOpenIdleWatchdog();
         state = EventState.COUNTDOWN;
         this.stopAt = stopAt;
         scoreboard.setStopAtForWorld(cfg.eventWorld, stopAt);
@@ -238,33 +244,68 @@ public final class AnvilDropEventManager implements Listener {
     }
 
     public void stopEvent() {
-        // Teleport players back before clearing state, so we can still read config.
         PluginConfig cfg = PluginConfig.load(plugin.getConfig());
         World event = Bukkit.getWorld(cfg.eventWorld);
         World lobby = Bukkit.getWorld(cfg.lobbyWorld);
         Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
-        if (event != null && lobbySpawn != null) {
-            for (Player p : event.getPlayers()) {
-                p.teleport(lobbySpawn);
-                // Requirement: when returning to lobby, ensure SURVIVAL
-                p.setGameMode(GameMode.SURVIVAL);
-            }
-        }
-
+        if (ending) return;
+        ending = true;
+        // Stop anvils/timers immediately, then delay the teleport for clarity.
         stopAllTasks();
-        participants.clear();
-        eliminated.clear();
-        deadDuringThisEvent.clear();
+        stopOpenIdleWatchdog();
         state = EventState.IDLE;
         stopAt = null;
-        ending = false;
         scoreboard.setTimeSecondsForWorld(cfg.eventWorld, 0);
         scoreboard.setStopAtForWorld(cfg.eventWorld, null);
         updateAliveScoreboard();
         broadcastEventEnded(cfg);
-        if (onEventEnd != null) {
-            try { onEventEnd.run(); } catch (Throwable ignored) {}
+
+        // Extra stop-grace messaging (configurable)
+        if (event != null) {
+            String endedFmt = plugin.getConfig().getString("stopGrace.endedChat", "&c{event} has ended!");
+            String nextFmt = plugin.getConfig().getString("stopGrace.nextRoundChat", "&aYou're going to the next round!");
+            String eventName = plugin.getConfig().getString("eventBroadcast.names.anvildrop", "AnvilDrop");
+            String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
+            String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            for (Player p : event.getPlayers()) {
+                p.sendMessage(endedMsg);
+                if (!p.hasPermission("event.admin") && !mods.isMod(p.getUniqueId()) && !deadPerms.isDead(p)) {
+                    p.sendMessage(nextMsg);
+                }
+            }
         }
+
+        if (event != null) {
+            for (Player p : event.getPlayers()) {
+                p.setInvulnerable(true);
+            }
+        }
+
+        int delay = Math.max(0, plugin.getConfig().getInt("stopGrace.seconds", 3));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            // Teleport players back to lobby after grace
+            if (event != null && lobbySpawn != null) {
+                for (Player p : event.getPlayers()) {
+                    p.setInvulnerable(false);
+                    p.teleport(lobbySpawn);
+                    p.setGameMode(GameMode.SURVIVAL);
+                }
+            }
+            if (event != null) {
+                // If lobbySpawn was missing, at least remove invulnerability
+                for (Player p : event.getPlayers()) {
+                    p.setInvulnerable(false);
+                }
+            }
+
+            participants.clear();
+            eliminated.clear();
+            deadDuringThisEvent.clear();
+            ending = false;
+            if (onEventEnd != null) {
+                try { onEventEnd.run(); } catch (Throwable ignored) {}
+            }
+        }, delay * 20L);
     }
 
     public boolean dropNow(double percent) {
@@ -350,6 +391,38 @@ public final class AnvilDropEventManager implements Listener {
             timerTask.cancel();
             timerTask = null;
         }
+    }
+
+    private void startOpenIdleWatchdog() {
+        stopOpenIdleWatchdog();
+        openIdleSeconds = 0;
+        openIdleTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (state != EventState.OPEN) {
+                stopOpenIdleWatchdog();
+                return;
+            }
+            PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+            World w = Bukkit.getWorld(cfg.eventWorld);
+            boolean serverEmpty = Bukkit.getOnlinePlayers().isEmpty();
+            boolean worldEmpty = (w == null || w.getPlayers().isEmpty());
+            if (serverEmpty || worldEmpty) {
+                openIdleSeconds++;
+            } else {
+                openIdleSeconds = 0;
+            }
+            int limit = Math.max(5, plugin.getConfig().getInt("autoStop.openEmptySeconds", 30));
+            if (openIdleSeconds >= limit) {
+                stopEvent();
+            }
+        }, 20L, 20L);
+    }
+
+    private void stopOpenIdleWatchdog() {
+        if (openIdleTask != null) {
+            openIdleTask.cancel();
+            openIdleTask = null;
+        }
+        openIdleSeconds = 0;
     }
 
     public int getAliveCount() {

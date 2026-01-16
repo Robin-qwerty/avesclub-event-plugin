@@ -1,7 +1,6 @@
 package club.aves.anvildrop.commands;
 
 import club.aves.anvildrop.config.PluginConfig;
-import club.aves.anvildrop.parkour.ParkourEventManager;
 import club.aves.anvildrop.spleef.SpleefEventManager;
 import club.aves.anvildrop.util.Text;
 import org.bukkit.command.Command;
@@ -9,20 +8,24 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.Plugin;
 
-public final class ParkourEventCommand implements CommandExecutor {
+public final class SpleefEventCommand implements CommandExecutor {
 
     private final Plugin plugin;
-    private final ParkourEventManager parkour;
-    private final club.aves.anvildrop.event.AnvilDropEventManager anvil;
-    private final club.aves.anvildrop.ffa.FFAEventManager ffa;
     private final SpleefEventManager spleef;
+    private final club.aves.anvildrop.event.AnvilDropEventManager anvil;
+    private final club.aves.anvildrop.parkour.ParkourEventManager parkour;
+    private final club.aves.anvildrop.ffa.FFAEventManager ffa;
 
-    public ParkourEventCommand(Plugin plugin, ParkourEventManager parkour, club.aves.anvildrop.event.AnvilDropEventManager anvil, club.aves.anvildrop.ffa.FFAEventManager ffa, SpleefEventManager spleef) {
+    public SpleefEventCommand(Plugin plugin,
+                              SpleefEventManager spleef,
+                              club.aves.anvildrop.event.AnvilDropEventManager anvil,
+                              club.aves.anvildrop.parkour.ParkourEventManager parkour,
+                              club.aves.anvildrop.ffa.FFAEventManager ffa) {
         this.plugin = plugin;
-        this.parkour = parkour;
-        this.anvil = anvil;
-        this.ffa = ffa;
         this.spleef = spleef;
+        this.anvil = anvil;
+        this.parkour = parkour;
+        this.ffa = ffa;
     }
 
     @Override
@@ -34,45 +37,45 @@ public final class ParkourEventCommand implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            sender.sendMessage(Text.color(cfg.msgPrefix + "&eUsage: &f/parkourevent open|start|stop"));
+            sender.sendMessage(Text.color(cfg.msgPrefix + "&eUsage: &f/spleefevent open|start|stop"));
             return true;
         }
 
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "open" -> {
-                if ((anvil != null && anvil.isActive()) || (ffa != null && ffa.isActive()) || (spleef != null && spleef.isActive())) {
-                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't open Parkour while another event is active."));
+                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
+                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't open Spleef while another event is active."));
                     return true;
                 }
-                boolean ok = parkour.open();
+                boolean ok = spleef.open();
                 sender.sendMessage(Text.color(cfg.msgPrefix + (ok
-                        ? plugin.getConfig().getString("parkourMessages.opened", "&aParkour event opened!")
-                        : "&cFailed to open parkour event. Check config worlds/spawns.")));
+                        ? plugin.getConfig().getString("spleefMessages.opened", "&aSpleef event opened!")
+                        : "&cFailed to open Spleef. Check config worlds/spawns.")));
                 return true;
             }
             case "start" -> {
-                if ((anvil != null && anvil.isActive()) || (ffa != null && ffa.isActive()) || (spleef != null && spleef.isActive())) {
-                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start Parkour while another event is active."));
+                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
+                    sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start Spleef while another event is active."));
                     return true;
                 }
                 Integer stopAt = parseStopAt(args);
                 if (stopAt != null) {
-                    int alive = parkour.getAliveCount();
+                    int alive = spleef.getAliveCount();
                     if (alive <= stopAt) {
                         sender.sendMessage(Text.color(cfg.msgPrefix + Text.replacePlaceholders(cfg.msgStopAtTooHigh, java.util.Map.of("alive", String.valueOf(alive)))));
                         return true;
                     }
                 }
-                boolean ok = parkour.start(stopAt);
+                boolean ok = spleef.start(stopAt);
                 sender.sendMessage(Text.color(cfg.msgPrefix + (ok
-                        ? plugin.getConfig().getString("parkourMessages.started", "&aParkour started! Wall removed.")
-                        : "&cParkour event is not open.")));
+                        ? plugin.getConfig().getString("spleefMessages.started", "&aSpleef started!")
+                        : "&cFailed to start Spleef. Check config worlds/spawns.")));
                 return true;
             }
             case "stop" -> {
-                parkour.stop();
-                sender.sendMessage(Text.color(cfg.msgPrefix + plugin.getConfig().getString("parkourMessages.stopped", "&cParkour stopped! Wall placed.")));
+                spleef.stop();
+                sender.sendMessage(Text.color(cfg.msgPrefix + plugin.getConfig().getString("spleefMessages.stopped", "&cSpleef stopped.")));
                 return true;
             }
             default -> {

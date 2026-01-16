@@ -207,6 +207,14 @@ public final class EventSettingsUI implements Listener {
         }
     }
 
+    /**
+     * Force-disable "hide other players" for this viewer (so they can see everyone again),
+     * even if they no longer have access to the settings GUI (e.g. when becoming spectator).
+     */
+    public void forceShowPlayers(Player viewer) {
+        setHidePlayers(viewer, false);
+    }
+
     @EventHandler
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();

@@ -10,6 +10,7 @@ import club.aves.anvildrop.commands.MuteChatCommand;
 import club.aves.anvildrop.commands.ParkourEventCommand;
 import club.aves.anvildrop.commands.ReviveCommand;
 import club.aves.anvildrop.commands.VoiceMuteCommand;
+import club.aves.anvildrop.commands.SpleefEventCommand;
 import club.aves.anvildrop.chat.ChatMuteListener;
 import club.aves.anvildrop.chat.ChatMuteManager;
 import club.aves.anvildrop.access.EventAccessListener;
@@ -23,6 +24,7 @@ import club.aves.anvildrop.hooks.WorldEditHook;
 import club.aves.anvildrop.listeners.JoinTeleportListener;
 import club.aves.anvildrop.mods.ModRegistry;
 import club.aves.anvildrop.parkour.ParkourEventManager;
+import club.aves.anvildrop.spleef.SpleefEventManager;
 import club.aves.anvildrop.tablist.DeadTabListManager;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.ui.EventSettingsUI;
@@ -43,6 +45,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
     private DeadTabListManager deadTab;
     private FFAKitManager ffaKits;
     private FFAEventManager ffaEvent;
+    private SpleefEventManager spleefEvent;
     private ReconnectManager reconnectManager;
 
     @Override
@@ -68,14 +71,16 @@ public final class AnvilDropPlugin extends JavaPlugin {
         this.deadTab.start();
         this.ffaKits = new FFAKitManager(this);
         this.ffaEvent = new FFAEventManager(this, ffaKits, deadPerms, scoreboard);
-        this.reconnectManager = new ReconnectManager(this, deadPerms, eventManager, parkourEvent, ffaEvent);
+        this.spleefEvent = new SpleefEventManager(this, scoreboard, deadPerms);
+        this.reconnectManager = new ReconnectManager(this, deadPerms, eventManager, parkourEvent, ffaEvent, spleefEvent);
         this.eventManager.setReconnectManager(reconnectManager);
         this.parkourEvent.setReconnectManager(reconnectManager);
         this.ffaEvent.setReconnectManager(reconnectManager);
+        this.spleefEvent.setReconnectManager(reconnectManager);
 
         var cmd = getCommand("anvildrop");
         if (cmd != null) {
-            var executor = new AnvilDropCommand(this, eventManager, worldEditHook, parkourEvent, ffaEvent);
+            var executor = new AnvilDropCommand(this, eventManager, worldEditHook, parkourEvent, ffaEvent, spleefEvent);
             cmd.setExecutor(executor);
             cmd.setTabCompleter(executor);
         }
@@ -99,7 +104,7 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var revive = getCommand("revive");
         if (revive != null) {
-            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry, parkourEvent, ffaEvent));
+            revive.setExecutor(new ReviveCommand(this, eventManager, deadPerms, eventSettingsUI, modRegistry, parkourEvent, ffaEvent, spleefEvent));
         }
 
         var dead = getCommand("dead");
@@ -119,12 +124,17 @@ public final class AnvilDropPlugin extends JavaPlugin {
 
         var parkour = getCommand("parkourevent");
         if (parkour != null) {
-            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent, eventManager, ffaEvent));
+            parkour.setExecutor(new ParkourEventCommand(this, parkourEvent, eventManager, ffaEvent, spleefEvent));
         }
 
         var ffa = getCommand("ffaevent");
         if (ffa != null) {
-            ffa.setExecutor(new FFAEventCommand(this, ffaEvent, ffaKits, eventManager, parkourEvent));
+            ffa.setExecutor(new FFAEventCommand(this, ffaEvent, ffaKits, eventManager, parkourEvent, spleefEvent));
+        }
+
+        var spleef = getCommand("spleefevent");
+        if (spleef != null) {
+            spleef.setExecutor(new SpleefEventCommand(this, spleefEvent, eventManager, parkourEvent, ffaEvent));
         }
 
         Bukkit.getPluginManager().registerEvents(eventManager, this);
@@ -136,7 +146,8 @@ public final class AnvilDropPlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(parkourEvent, this);
         Bukkit.getPluginManager().registerEvents(deadTab, this);
         Bukkit.getPluginManager().registerEvents(ffaEvent, this);
-        Bukkit.getPluginManager().registerEvents(new EventAccessListener(this, eventManager, parkourEvent, ffaEvent, reconnectManager), this);
+        Bukkit.getPluginManager().registerEvents(spleefEvent, this);
+        Bukkit.getPluginManager().registerEvents(new EventAccessListener(this, eventManager, parkourEvent, ffaEvent, spleefEvent, reconnectManager), this);
 
         // If the plugin is reloaded while players are already online in the event world, ensure they have the compass.
         Bukkit.getScheduler().runTask(this, () -> eventSettingsUI.initForOnlinePlayers());

@@ -42,6 +42,10 @@ commands:
     description: Manage the FFA event
     usage: /ffaevent <open|start|stop|kit>
     aliases: [ffa]
+  spleefevent:
+    description: Manage the Spleef event
+    usage: /spleefevent <open|start|stop>
+    aliases: [spleef]
 
 permissions:
   anvildrop.open:

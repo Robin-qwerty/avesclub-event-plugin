@@ -5,6 +5,7 @@ worlds:
   eventWorld: "anvildrop"
   parkourWorld: "parkour"
   ffaWorld: "ffa"
+  spleefWorld: "spleef"
 
 spawns:
   lobby:
@@ -43,6 +44,24 @@ spawns:
     z: 0.5
     yaw: 0.0
     pitch: 0.0
+  spleefWaiting:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+  spleefStart:
+    x: 0.5
+    y: 80.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+  spleefSpectator:
+    x: 0.5
+    y: 100.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
 
 ffa:
   startRegion:
@@ -63,6 +82,37 @@ ffa:
   worldguard:
     region: "ffaarea"
     world: "desertffa"
+  border:
+    enabled: true
+    # Default border size (diameter). Reset to this size on /ffaevent open and on stop/end.
+    defaultSize: 165
+    # Minimum border size (diameter) when very few players remain.
+    minSize: 30
+    # How often we check alive count (seconds). Only runs once the game is RUNNING.
+    checkIntervalSeconds: 5
+    # Shrink speed. We shrink smoothly using the WorldBorder transition time.
+    blocksPerSecond: 2.0
+    minShrinkSeconds: 10
+    # Broadcast when border starts shrinking to a new target
+    shrinkAnnounce: "&eBorder is shrinking to &6{size}&e (alive: &f{alive}&e)"
+
+spleef:
+  countdown:
+    seconds: 5
+    chatFormat: "&eSpleef starts in &6{seconds}&e..."
+    goTitle: "&aGO!"
+    goSubtitle: "&fBreak the floor!"
+    goTitleSeconds: 2
+  breakableBlock: "SNOW_BLOCK"
+  arena:
+    min:
+      x: -10
+      y: 60
+      z: -10
+    max:
+      x: 10
+      y: 70
+      z: 10
 
 parkour:
   countdown:
@@ -175,11 +225,31 @@ ffaScoreboard:
     - "&eTime: &f{time}"
   extraBottom: []
 
+spleefScoreboard:
+  enabled: true
+  title: "&b&lSPLEEF"
+  extraTop: []
+  lines:
+    - "&eAlive: &f{alive}"
+    - "&eTime: &f{time}"
+  extraBottom: []
+
 joinTeleport:
   enabled: true
 
 reconnect:
   graceSeconds: 30
+
+autoStop:
+  # If an event is OPEN but the server is empty OR the event world is empty for this many seconds,
+  # automatically stop it (prevents events staying open forever).
+  openEmptySeconds: 30
+
+stopGrace:
+  # When an admin stops an event, make players invulnerable and wait this many seconds before teleporting to lobby.
+  seconds: 3
+  endedChat: "&c{event} has ended!"
+  nextRoundChat: "&aYou're going to the next round!"
 
 discord:
   link: "https://discord.gg/your-invite"
@@ -275,6 +345,7 @@ eventBroadcast:
     anvildrop: "AnvilDrop"
     parkour: "Parkour"
     ffa: "FFA"
+    spleef: "Spleef"
 
 voiceMute:
   enabled: false
@@ -293,6 +364,11 @@ ffaMessages:
   stopped: "&cFFA stopped."
   kitSaved: "&aSaved kit &f{kit}&a."
   kitNotFound: "&cKit not found: &f{kit}"
+
+spleefMessages:
+  opened: "&aSpleef event opened!"
+  started: "&aSpleef started!"
+  stopped: "&cSpleef stopped."
 
 tabList:
   deadEnabled: true

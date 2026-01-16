@@ -5,6 +5,7 @@ import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.parkour.ParkourEventManager;
 import club.aves.anvildrop.reconnect.ReconnectManager;
+import club.aves.anvildrop.spleef.SpleefEventManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -23,17 +24,20 @@ public final class EventAccessListener implements Listener {
     private final AnvilDropEventManager anvil;
     private final ParkourEventManager parkour;
     private final FFAEventManager ffa;
+    private final SpleefEventManager spleef;
     private final ReconnectManager reconnect;
 
     public EventAccessListener(Plugin plugin,
                               AnvilDropEventManager anvil,
                               ParkourEventManager parkour,
                               FFAEventManager ffa,
+                              SpleefEventManager spleef,
                               ReconnectManager reconnect) {
         this.plugin = plugin;
         this.anvil = anvil;
         this.parkour = parkour;
         this.ffa = ffa;
+        this.spleef = spleef;
         this.reconnect = reconnect;
     }
 
@@ -81,6 +85,10 @@ public final class EventAccessListener implements Listener {
         }
         if (toWorld.equalsIgnoreCase(cfg.ffaWorld) && (ffa == null || !ffa.isActive())) {
             e.setTo(lobbySpawn(cfg));
+            return;
+        }
+        if (toWorld.equalsIgnoreCase(cfg.spleefWorld) && (spleef == null || !spleef.isActive())) {
+            e.setTo(lobbySpawn(cfg));
         }
     }
 
@@ -99,6 +107,10 @@ public final class EventAccessListener implements Listener {
             return;
         }
         if (w.equalsIgnoreCase(cfg.ffaWorld) && (ffa == null || !ffa.isActive())) {
+            p.teleport(lobbySpawn(cfg));
+            return;
+        }
+        if (w.equalsIgnoreCase(cfg.spleefWorld) && (spleef == null || !spleef.isActive())) {
             p.teleport(lobbySpawn(cfg));
         }
     }
@@ -121,6 +133,10 @@ public final class EventAccessListener implements Listener {
         }
         if (ffa != null && ffa.isAcceptingJoins()) {
             if (cfg.ffaOpenSpawn != null) p.teleport(cfg.ffaOpenSpawn);
+            return;
+        }
+        if (spleef != null && spleef.isAcceptingJoins()) {
+            if (cfg.spleefWaitingSpawn != null) p.teleport(cfg.spleefWaitingSpawn);
         }
     }
 

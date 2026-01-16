@@ -13,6 +13,7 @@ public final class PluginConfig {
     public final String eventWorld;
     public final String parkourWorld;
     public final String ffaWorld;
+    public final String spleefWorld;
 
     public final Location lobbySpawn;
     public final Location eventSpawn;
@@ -20,8 +21,12 @@ public final class PluginConfig {
     public final Location parkourSpectatorSpawn;
     public final Location ffaOpenSpawn;
     public final Location ffaSpectatorSpawn;
+    public final Location spleefWaitingSpawn;
+    public final Location spleefStartSpawn;
+    public final Location spleefSpectatorSpawn;
 
     public final ArenaCuboid arena;
+    public final ArenaCuboid spleefArena;
 
     public final String openTitle;
     public final String openSubtitle;
@@ -63,6 +68,12 @@ public final class PluginConfig {
     public final java.util.List<String> ffaScoreboardLines;
     public final java.util.List<String> ffaScoreboardExtraTop;
     public final java.util.List<String> ffaScoreboardExtraBottom;
+
+    public final boolean spleefScoreboardEnabled;
+    public final String spleefScoreboardTitle;
+    public final java.util.List<String> spleefScoreboardLines;
+    public final java.util.List<String> spleefScoreboardExtraTop;
+    public final java.util.List<String> spleefScoreboardExtraBottom;
 
     public final club.aves.anvildrop.model.ArenaCuboid parkourWall;
     public final club.aves.anvildrop.model.ArenaCuboid parkourEndRegion;
@@ -115,6 +126,7 @@ public final class PluginConfig {
         this.eventWorld = c.getString("worlds.eventWorld", "anvildrop");
         this.parkourWorld = c.getString("worlds.parkourWorld", "parkour");
         this.ffaWorld = c.getString("worlds.ffaWorld", "ffa");
+        this.spleefWorld = c.getString("worlds.spleefWorld", "spleef");
 
         this.lobbySpawn = readSpawn(c, lobbyWorld, "spawns.lobby");
         this.eventSpawn = readSpawn(c, eventWorld, "spawns.event");
@@ -122,8 +134,12 @@ public final class PluginConfig {
         this.parkourSpectatorSpawn = readSpawn(c, parkourWorld, "spawns.parkourSpectator");
         this.ffaOpenSpawn = readSpawn(c, ffaWorld, "spawns.ffaOpen");
         this.ffaSpectatorSpawn = readSpawn(c, ffaWorld, "spawns.ffaSpectator");
+        this.spleefWaitingSpawn = readSpawn(c, spleefWorld, "spawns.spleefWaiting");
+        this.spleefStartSpawn = readSpawn(c, spleefWorld, "spawns.spleefStart");
+        this.spleefSpectatorSpawn = readSpawn(c, spleefWorld, "spawns.spleefSpectator");
 
         this.arena = readArena(c, eventWorld);
+        this.spleefArena = readCuboid(c, spleefWorld, "spleef.arena", -10, 60, -10, 10, 70, 10);
 
         this.openTitle = c.getString("openScreen.title", "&aAnvil Drop Event");
         this.openSubtitle = c.getString("openScreen.subtitle", "&fGet ready...");
@@ -186,6 +202,14 @@ public final class PluginConfig {
         this.ffaScoreboardExtraTop = safeList(c.getStringList("ffaScoreboard.extraTop"));
         this.ffaScoreboardExtraBottom = safeList(c.getStringList("ffaScoreboard.extraBottom"));
         this.ffaScoreboardLines = concat(ffaScoreboardExtraTop, ffaLines, ffaScoreboardExtraBottom);
+
+        this.spleefScoreboardEnabled = c.getBoolean("spleefScoreboard.enabled", true);
+        this.spleefScoreboardTitle = c.getString("spleefScoreboard.title", "&b&lSPLEEF");
+        java.util.List<String> spleefLines = c.getStringList("spleefScoreboard.lines");
+        if (spleefLines == null || spleefLines.isEmpty()) spleefLines = java.util.List.of("&eAlive: &f{alive}");
+        this.spleefScoreboardExtraTop = safeList(c.getStringList("spleefScoreboard.extraTop"));
+        this.spleefScoreboardExtraBottom = safeList(c.getStringList("spleefScoreboard.extraBottom"));
+        this.spleefScoreboardLines = concat(spleefScoreboardExtraTop, spleefLines, spleefScoreboardExtraBottom);
 
         int wMinX = c.getInt("parkour.wall.min.x", -5);
         int wMinY = c.getInt("parkour.wall.min.y", 70);
@@ -278,6 +302,16 @@ public final class PluginConfig {
         int maxY = c.getInt("arena.max.y", 90);
         int maxZ = c.getInt("arena.max.z", 10);
         return ArenaCuboid.normalized(eventWorld, minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private static ArenaCuboid readCuboid(FileConfiguration c, String worldName, String path, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        int x1 = c.getInt(path + ".min.x", minX);
+        int y1 = c.getInt(path + ".min.y", minY);
+        int z1 = c.getInt(path + ".min.z", minZ);
+        int x2 = c.getInt(path + ".max.x", maxX);
+        int y2 = c.getInt(path + ".max.y", maxY);
+        int z2 = c.getInt(path + ".max.z", maxZ);
+        return ArenaCuboid.normalized(worldName, x1, y1, z1, x2, y2, z2);
     }
 
     private static double clampPercent(double p) {

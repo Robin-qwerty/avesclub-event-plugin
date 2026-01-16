@@ -4,6 +4,7 @@ import club.aves.anvildrop.config.PluginConfig;
 import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.ffa.FFAKitManager;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.spleef.SpleefEventManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -21,17 +22,20 @@ public final class FFAEventCommand implements CommandExecutor {
     private final FFAKitManager kits;
     private final club.aves.anvildrop.event.AnvilDropEventManager anvil;
     private final club.aves.anvildrop.parkour.ParkourEventManager parkour;
+    private final SpleefEventManager spleef;
 
     private static final Map<String, Long> kitOverwriteConfirmUntil = new HashMap<>();
 
     public FFAEventCommand(Plugin plugin, FFAEventManager ffa, FFAKitManager kits,
                            club.aves.anvildrop.event.AnvilDropEventManager anvil,
-                           club.aves.anvildrop.parkour.ParkourEventManager parkour) {
+                           club.aves.anvildrop.parkour.ParkourEventManager parkour,
+                           SpleefEventManager spleef) {
         this.plugin = plugin;
         this.ffa = ffa;
         this.kits = kits;
         this.anvil = anvil;
         this.parkour = parkour;
+        this.spleef = spleef;
     }
 
     @Override
@@ -50,7 +54,7 @@ public final class FFAEventCommand implements CommandExecutor {
         String sub = args[0].toLowerCase();
         switch (sub) {
             case "open" -> {
-                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive())) {
+                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive()) || (spleef != null && spleef.isActive())) {
                     sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't open FFA while another event is active."));
                     return true;
                 }
@@ -61,7 +65,7 @@ public final class FFAEventCommand implements CommandExecutor {
                 return true;
             }
             case "start" -> {
-                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive())) {
+                if ((anvil != null && anvil.isActive()) || (parkour != null && parkour.isActive()) || (spleef != null && spleef.isActive())) {
                     sender.sendMessage(Text.color(cfg.msgPrefix + "&cYou can't start FFA while another event is active."));
                     return true;
                 }

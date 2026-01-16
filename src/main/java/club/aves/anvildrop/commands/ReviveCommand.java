@@ -6,6 +6,7 @@ import club.aves.anvildrop.event.AnvilDropEventManager;
 import club.aves.anvildrop.ffa.FFAEventManager;
 import club.aves.anvildrop.mods.ModRegistry;
 import club.aves.anvildrop.parkour.ParkourEventManager;
+import club.aves.anvildrop.spleef.SpleefEventManager;
 import club.aves.anvildrop.ui.EventSettingsUI;
 import club.aves.anvildrop.util.Text;
 import org.bukkit.Bukkit;
@@ -30,6 +31,7 @@ public final class ReviveCommand implements CommandExecutor {
     private final ModRegistry mods;
     private final ParkourEventManager parkour;
     private final FFAEventManager ffa;
+    private final SpleefEventManager spleef;
 
     private static final Map<String, Long> reviveAllConfirmUntil = new HashMap<>();
 
@@ -39,7 +41,8 @@ public final class ReviveCommand implements CommandExecutor {
                         EventSettingsUI settingsUI,
                         ModRegistry mods,
                         ParkourEventManager parkour,
-                        FFAEventManager ffa) {
+                        FFAEventManager ffa,
+                        SpleefEventManager spleef) {
         this.plugin = plugin;
         this.eventManager = eventManager;
         this.deadPerms = deadPerms;
@@ -47,6 +50,7 @@ public final class ReviveCommand implements CommandExecutor {
         this.mods = mods;
         this.parkour = parkour;
         this.ffa = ffa;
+        this.spleef = spleef;
     }
 
     @Override
@@ -69,7 +73,7 @@ public final class ReviveCommand implements CommandExecutor {
                 sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
                 return true;
             }
-            if (eventManager.isActive() || (parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive())) {
+            if (eventManager.isActive() || (parkour != null && parkour.isActive()) || (ffa != null && ffa.isActive()) || (spleef != null && spleef.isActive())) {
                 sender.sendMessage(Text.color(cfg.msgPrefix + cfg.msgReviveAllNotAllowed));
                 return true;
             }
@@ -155,6 +159,18 @@ public final class ReviveCommand implements CommandExecutor {
         PluginConfig c = PluginConfig.load(plugin.getConfig());
         if (parkour != null && parkour.isActive() && (target.getWorld().getName().equalsIgnoreCase(c.parkourWorld) || parkour.isEliminated(target))) {
             parkour.reviveToStart(target);
+            sender.sendMessage(Text.color(c.msgPrefix + Text.replacePlaceholders(c.msgRevived, Map.of("player", target.getName()))));
+            return true;
+        }
+
+        if (ffa != null && ffa.isActive() && target.getWorld().getName().equalsIgnoreCase(c.ffaWorld)) {
+            ffa.reviveToFight(target);
+            sender.sendMessage(Text.color(c.msgPrefix + Text.replacePlaceholders(c.msgRevived, Map.of("player", target.getName()))));
+            return true;
+        }
+
+        if (spleef != null && spleef.isActive()) {
+            spleef.revive(target);
             sender.sendMessage(Text.color(c.msgPrefix + Text.replacePlaceholders(c.msgRevived, Map.of("player", target.getName()))));
             return true;
         }
