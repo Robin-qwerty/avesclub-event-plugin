@@ -35,4 +35,6 @@
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/tablist/DeadTabListManager.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ui/AnvilDropScoreboard.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/ui/EventSettingsUI.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/util/Debug.java
+/home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/util/TeleportBatcher.java
 /home/robin/Documents/code/java/avesclub-anvildrop-event-plugin/src/main/java/club/aves/anvildrop/util/Text.java

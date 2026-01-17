@@ -99,7 +99,9 @@ public final class ReviveCommand implements CommandExecutor {
                 org.bukkit.Location lobbySpawn = cfg.lobbySpawn != null ? cfg.lobbySpawn : (lobby != null ? lobby.getSpawnLocation() : null);
                 if (lobbySpawn != null) {
                     for (Player p : Bukkit.getOnlinePlayers()) {
-                        p.teleport(lobbySpawn);
+                        if (!p.getWorld().getName().equalsIgnoreCase(cfg.lobbyWorld)) {
+                            p.teleport(lobbySpawn);
+                        }
                         p.setGameMode(GameMode.SURVIVAL);
                     }
                 }

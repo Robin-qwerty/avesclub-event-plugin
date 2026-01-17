@@ -251,6 +251,10 @@ stopGrace:
   endedChat: "&c{event} has ended!"
   nextRoundChat: "&aYou're going to the next round!"
 
+debug:
+  enabled: false
+  logBatchOps: true
+
 discord:
   link: "https://discord.gg/your-invite"
 

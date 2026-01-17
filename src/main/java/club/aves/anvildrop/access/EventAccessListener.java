@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.inventory.ItemStack;
 
 public final class EventAccessListener implements Listener {
 
@@ -49,6 +50,19 @@ public final class EventAccessListener implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             enforceNoPlayersInInactiveEventWorld(p);
             autoJoinIfLobbyAndEventOpen(p);
+            // If no event is active and they're in the lobby, clear any leftover event items (kits, etc.)
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (p == null || !p.isOnline() || p.getWorld() == null) return;
+                if (p.hasPermission("event.admin")) return;
+                PluginConfig cfg = PluginConfig.load(plugin.getConfig());
+                boolean anyActive = (anvil != null && anvil.isActive())
+                        || (parkour != null && parkour.isActive())
+                        || (ffa != null && ffa.isActive())
+                        || (spleef != null && spleef.isActive());
+                if (anyActive) return;
+                if (!p.getWorld().getName().equalsIgnoreCase(cfg.lobbyWorld)) return;
+                clearAllItems(p);
+            }, 2L);
         });
     }
 
@@ -146,6 +160,15 @@ public final class EventAccessListener implements Listener {
         if (lobby != null) return lobby.getSpawnLocation();
         // absolute fallback
         return Bukkit.getWorlds().getFirst().getSpawnLocation();
+    }
+
+    private static void clearAllItems(Player p) {
+        if (p == null) return;
+        var inv = p.getInventory();
+        inv.clear();
+        inv.setArmorContents(new ItemStack[0]);
+        inv.setItemInOffHand(null);
+        p.updateInventory();
     }
 }
 

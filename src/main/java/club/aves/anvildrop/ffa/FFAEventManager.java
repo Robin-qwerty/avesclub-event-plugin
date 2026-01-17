@@ -5,6 +5,7 @@ import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.model.ArenaCuboid;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.util.TeleportBatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -99,12 +100,13 @@ public final class FFAEventManager implements Listener {
         resetBorder(ffa);
         scoreboard.setTimeSecondsForWorld(cfg.ffaWorld, 0);
 
-        // Teleport lobby players into FFA open spawn
-        for (Player p : lobby.getPlayers()) {
+        // Teleport lobby players into FFA open spawn (batched)
+        var toTeleport = lobby.getPlayers();
+        TeleportBatcher.preloadChunks(cfg.ffaOpenSpawn, 5);
+        TeleportBatcher.teleportInBatches(plugin, toTeleport, cfg.ffaOpenSpawn, 4, 2, (p) -> {
             participants.add(p.getUniqueId());
-            p.teleport(cfg.ffaOpenSpawn);
             p.setGameMode(GameMode.SURVIVAL);
-        }
+        }, null);
         broadcastEventOpened(cfg);
         updateAlive();
         startOpenIdleWatchdog();
@@ -138,8 +140,8 @@ public final class FFAEventManager implements Listener {
             participants.add(p.getUniqueId());
         }
 
-        // Teleport + kit immediately, then countdown, then enable pvp
-        for (Player p : List.copyOf(ffa.getPlayers())) {
+        // Teleport + kit in batches (avoid giving items all at once)
+        TeleportBatcher.runInBatches(plugin, List.copyOf(ffa.getPlayers()), 5, 1, (p) -> {
             // Requirement: if marked dead, do NOT give kit and put them in spectator at ffaSpectator spawn.
             if (deadPerms != null && deadPerms.isDead(p) && !p.hasPermission("event.admin")) {
                 eliminated.add(p.getUniqueId());
@@ -148,14 +150,14 @@ public final class FFAEventManager implements Listener {
                     p.teleport(cfg.ffaSpectatorSpawn);
                 }
                 p.setGameMode(GameMode.SPECTATOR);
-                continue;
+                return;
             }
 
             p.setGameMode(GameMode.SURVIVAL);
             Location spawn = randomInRegion(cfg.ffaStartRegion, ffa);
             if (spawn != null) p.teleport(spawn);
             giveKit(p, kit);
-        }
+        }, null);
 
         int seconds = Math.max(0, plugin.getConfig().getInt("ffa.countdown.seconds", 15));
         if (seconds <= 0) {
@@ -233,9 +235,11 @@ public final class FFAEventManager implements Listener {
             String eventName = plugin.getConfig().getString("eventBroadcast.names.ffa", "FFA");
             String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
             String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            java.util.Set<java.util.UUID> trackedDead = (deadPerms != null) ? deadPerms.getTrackedDeadUuids() : java.util.Set.of();
             for (Player p : ffa.getPlayers()) {
                 p.sendMessage(endedMsg);
-                if (!p.hasPermission("event.admin") && (deadPerms == null || !deadPerms.isDead(p))) {
+                boolean isDead = deadPerms != null && (deadPerms.isDead(p) || trackedDead.contains(p.getUniqueId()));
+                if (!p.hasPermission("event.admin") && !isDead) {
                     p.sendMessage(nextMsg);
                 }
             }
@@ -248,22 +252,26 @@ public final class FFAEventManager implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (ffa != null) clearGroundItems(ffa);
             if (ffa != null && lobbySpawn != null) {
-                for (Player p : ffa.getPlayers()) {
+                TeleportBatcher.preloadChunks(lobbySpawn, 5);
+                TeleportBatcher.teleportInBatches(plugin, ffa.getPlayers(), lobbySpawn, 4, 2, (p) -> {
                     p.setInvulnerable(false);
                     clearInventory(p);
-                    p.teleport(lobbySpawn);
                     p.setGameMode(GameMode.SURVIVAL);
-                }
-            }
-            if (ffa != null) {
+                }, () -> {
+                    participants.clear();
+                    eliminated.clear();
+                    ending = false;
+                    updateAlive();
+                });
+            } else if (ffa != null) {
                 for (Player p : ffa.getPlayers()) {
                     p.setInvulnerable(false);
                 }
+                participants.clear();
+                eliminated.clear();
+                ending = false;
+                updateAlive();
             }
-            participants.clear();
-            eliminated.clear();
-            ending = false;
-            updateAlive();
         }, delay * 20L);
     }
 

@@ -5,6 +5,7 @@ import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.model.ArenaCuboid;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.util.TeleportBatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -97,22 +98,28 @@ public final class SpleefEventManager implements Listener {
 
         snapshotArena(cfg);
 
+        var dead = new java.util.ArrayList<Player>();
+        var alive = new java.util.ArrayList<Player>();
         for (Player p : lobby.getPlayers()) {
-            if (shouldBeSpectator(p)) {
-                eliminated.add(p.getUniqueId());
-                p.teleport(cfg.spleefSpectatorSpawn);
-                // Set immediately + a tick later (some servers/plugins override right after teleport)
-                p.setGameMode(GameMode.SPECTATOR);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (!p.isOnline()) return;
-                    if (p.getWorld() == null || !p.getWorld().getName().equalsIgnoreCase(cfg.spleefWorld)) return;
-                    p.setGameMode(GameMode.SPECTATOR);
-                }, 2L);
-                continue;
-            }
-            p.teleport(cfg.spleefWaitingSpawn);
-            p.setGameMode(GameMode.SURVIVAL);
+            if (shouldBeSpectator(p)) dead.add(p);
+            else alive.add(p);
         }
+        TeleportBatcher.preloadChunks(cfg.spleefWaitingSpawn, 5);
+        TeleportBatcher.preloadChunks(cfg.spleefSpectatorSpawn, 5);
+
+        TeleportBatcher.teleportInBatches(plugin, alive, cfg.spleefWaitingSpawn, 4, 2, (p) -> {
+            p.setGameMode(GameMode.SURVIVAL);
+        }, null);
+
+        TeleportBatcher.teleportInBatches(plugin, dead, cfg.spleefSpectatorSpawn, 4, 2, (p) -> {
+            eliminated.add(p.getUniqueId());
+            p.setGameMode(GameMode.SPECTATOR);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!p.isOnline()) return;
+                if (p.getWorld() == null || !p.getWorld().getName().equalsIgnoreCase(cfg.spleefWorld)) return;
+                p.setGameMode(GameMode.SPECTATOR);
+            }, 2L);
+        }, null);
 
         broadcastEventOpened(cfg);
         updateAlive();
@@ -133,17 +140,17 @@ public final class SpleefEventManager implements Listener {
         state = SpleefEventState.COUNTDOWN;
         stopOpenIdleWatchdog();
 
-        for (Player p : spleef.getPlayers()) {
+        TeleportBatcher.runInBatches(plugin, List.copyOf(spleef.getPlayers()), 5, 1, (p) -> {
             if (shouldBeSpectator(p)) {
                 eliminated.add(p.getUniqueId());
                 p.teleport(cfg.spleefSpectatorSpawn);
                 p.setGameMode(GameMode.SPECTATOR);
-                continue;
+                return;
             }
             p.teleport(cfg.spleefStartSpawn);
             p.setGameMode(GameMode.SURVIVAL);
             giveShovel(p);
-        }
+        }, null);
 
         int seconds = Math.max(0, plugin.getConfig().getInt("spleef.countdown.seconds", 5));
         if (seconds <= 0) {
@@ -214,9 +221,11 @@ public final class SpleefEventManager implements Listener {
             String eventName = plugin.getConfig().getString("eventBroadcast.names.spleef", "Spleef");
             String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
             String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            java.util.Set<java.util.UUID> trackedDead = (deadPerms != null) ? deadPerms.getTrackedDeadUuids() : java.util.Set.of();
             for (Player p : spleef.getPlayers()) {
                 p.sendMessage(endedMsg);
-                if (!p.hasPermission("event.admin") && (deadPerms == null || !deadPerms.isDead(p))) {
+                boolean isDead = deadPerms != null && (deadPerms.isDead(p) || trackedDead.contains(p.getUniqueId()));
+                if (!p.hasPermission("event.admin") && !isDead) {
                     p.sendMessage(nextMsg);
                 }
             }
@@ -228,22 +237,26 @@ public final class SpleefEventManager implements Listener {
         int delay = Math.max(0, plugin.getConfig().getInt("stopGrace.seconds", 3));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (spleef != null && lobbySpawn != null) {
-                for (Player p : spleef.getPlayers()) {
+                TeleportBatcher.preloadChunks(lobbySpawn, 5);
+                TeleportBatcher.teleportInBatches(plugin, spleef.getPlayers(), lobbySpawn, 4, 2, (p) -> {
                     p.setInvulnerable(false);
                     clearInventory(p);
-                    p.teleport(lobbySpawn);
                     p.setGameMode(GameMode.SURVIVAL);
-                }
-            }
-            if (spleef != null) {
+                }, () -> {
+                    restoreArena(cfg);
+                    eliminated.clear();
+                    ending = false;
+                    updateAlive();
+                });
+            } else if (spleef != null) {
                 for (Player p : spleef.getPlayers()) {
                     p.setInvulnerable(false);
                 }
+                restoreArena(cfg);
+                eliminated.clear();
+                ending = false;
+                updateAlive();
             }
-            restoreArena(cfg);
-            eliminated.clear();
-            ending = false;
-            updateAlive();
         }, delay * 20L);
     }
 

@@ -6,6 +6,7 @@ import club.aves.anvildrop.mods.ModRegistry;
 import club.aves.anvildrop.model.ArenaCuboid;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.util.TeleportBatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -136,9 +137,10 @@ public final class AnvilDropEventManager implements Listener {
         // Set OPEN before teleporting so "already dead -> spectator" logic applies immediately.
         state = EventState.OPEN;
 
-        for (Player p : lobby.getPlayers()) {
+        var toTeleport = lobby.getPlayers();
+        TeleportBatcher.preloadChunks(cfg.eventSpawn, 5);
+        TeleportBatcher.teleportInBatches(plugin, toTeleport, cfg.eventSpawn, 4, 2, (p) -> {
             participants.add(p.getUniqueId());
-            p.teleport(cfg.eventSpawn);
             // Only players who ENTER the event already-dead should be forced spectator.
             // Teleport can complete before the client/world is fully ready; set spectator shortly after teleport.
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -148,12 +150,12 @@ public final class AnvilDropEventManager implements Listener {
                 if (shouldForceSpectator(p)) {
                     p.setGameMode(GameMode.SPECTATOR);
                 }
+                int fadeIn = 10;
+                int stay = cfg.openSeconds * 20;
+                int fadeOut = 10;
+                p.sendTitle(Text.color(cfg.openTitle), Text.color(cfg.openSubtitle), fadeIn, stay, fadeOut);
             }, 2L);
-            int fadeIn = 10;
-            int stay = cfg.openSeconds * 20;
-            int fadeOut = 10;
-            p.sendTitle(Text.color(cfg.openTitle), Text.color(cfg.openSubtitle), fadeIn, stay, fadeOut);
-        }
+        }, null);
         broadcastEventOpened(cfg);
         startAliveUpdater();
         startOpenIdleWatchdog();
@@ -267,9 +269,11 @@ public final class AnvilDropEventManager implements Listener {
             String eventName = plugin.getConfig().getString("eventBroadcast.names.anvildrop", "AnvilDrop");
             String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
             String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            java.util.Set<java.util.UUID> trackedDead = (deadPerms != null) ? deadPerms.getTrackedDeadUuids() : java.util.Set.of();
             for (Player p : event.getPlayers()) {
                 p.sendMessage(endedMsg);
-                if (!p.hasPermission("event.admin") && !mods.isMod(p.getUniqueId()) && !deadPerms.isDead(p)) {
+                boolean isDead = deadPerms != null && (deadPerms.isDead(p) || trackedDead.contains(p.getUniqueId()));
+                if (!p.hasPermission("event.admin") && !mods.isMod(p.getUniqueId()) && !isDead) {
                     p.sendMessage(nextMsg);
                 }
             }
@@ -283,27 +287,33 @@ public final class AnvilDropEventManager implements Listener {
 
         int delay = Math.max(0, plugin.getConfig().getInt("stopGrace.seconds", 3));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // Teleport players back to lobby after grace
+            // Teleport players back to lobby after grace (batched)
             if (event != null && lobbySpawn != null) {
-                for (Player p : event.getPlayers()) {
+                TeleportBatcher.preloadChunks(lobbySpawn, 5);
+                TeleportBatcher.teleportInBatches(plugin, event.getPlayers(), lobbySpawn, 4, 2, (p) -> {
                     p.setInvulnerable(false);
-                    p.teleport(lobbySpawn);
                     p.setGameMode(GameMode.SURVIVAL);
-                }
-            }
-            if (event != null) {
+                }, () -> {
+                    participants.clear();
+                    eliminated.clear();
+                    deadDuringThisEvent.clear();
+                    ending = false;
+                    if (onEventEnd != null) {
+                        try { onEventEnd.run(); } catch (Throwable ignored) {}
+                    }
+                });
+            } else if (event != null) {
                 // If lobbySpawn was missing, at least remove invulnerability
                 for (Player p : event.getPlayers()) {
                     p.setInvulnerable(false);
                 }
-            }
-
-            participants.clear();
-            eliminated.clear();
-            deadDuringThisEvent.clear();
-            ending = false;
-            if (onEventEnd != null) {
-                try { onEventEnd.run(); } catch (Throwable ignored) {}
+                participants.clear();
+                eliminated.clear();
+                deadDuringThisEvent.clear();
+                ending = false;
+                if (onEventEnd != null) {
+                    try { onEventEnd.run(); } catch (Throwable ignored) {}
+                }
             }
         }, delay * 20L);
     }

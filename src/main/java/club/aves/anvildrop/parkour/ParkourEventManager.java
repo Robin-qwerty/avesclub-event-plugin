@@ -6,6 +6,7 @@ import club.aves.anvildrop.dead.DeadPermissionService;
 import club.aves.anvildrop.ui.AnvilDropScoreboard;
 import club.aves.anvildrop.ui.EventSettingsUI;
 import club.aves.anvildrop.util.Text;
+import club.aves.anvildrop.util.TeleportBatcher;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -95,12 +96,13 @@ public final class ParkourEventManager implements Listener {
         // Place wall on open
         placeWall(true);
 
-        // Requirement: teleport everybody
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            p.teleport(cfg.parkourSpawn);
+        // Requirement: teleport everybody (batched)
+        var everyone = Bukkit.getOnlinePlayers();
+        TeleportBatcher.preloadChunks(cfg.parkourSpawn, 5);
+        TeleportBatcher.teleportInBatches(plugin, everyone, cfg.parkourSpawn, 4, 2, (p) -> {
             p.setGameMode(GameMode.SURVIVAL);
             Bukkit.getScheduler().runTask(plugin, () -> settingsUI.ensureCompass(p));
-        }
+        }, null);
 
         scoreboard.setAliveCountForWorld(cfg.parkourWorld, getAliveCount());
         scoreboard.setTimeSecondsForWorld(cfg.parkourWorld, 0);
@@ -223,9 +225,11 @@ public final class ParkourEventManager implements Listener {
             String eventName = plugin.getConfig().getString("eventBroadcast.names.parkour", "Parkour");
             String endedMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(endedFmt, java.util.Map.of("event", eventName)));
             String nextMsg = Text.color(cfg.msgPrefix + Text.replacePlaceholders(nextFmt, java.util.Map.of("event", eventName)));
+            java.util.Set<java.util.UUID> trackedDead = (deadPerms != null) ? deadPerms.getTrackedDeadUuids() : java.util.Set.of();
             for (Player p : parkour.getPlayers()) {
                 p.sendMessage(endedMsg);
-                if (!p.hasPermission("event.admin") && (deadPerms == null || !deadPerms.isDead(p))) {
+                boolean isDead = deadPerms != null && (deadPerms.isDead(p) || trackedDead.contains(p.getUniqueId()));
+                if (!p.hasPermission("event.admin") && !isDead) {
                     p.sendMessage(nextMsg);
                 }
             }
@@ -240,23 +244,28 @@ public final class ParkourEventManager implements Listener {
         int delay = Math.max(0, plugin.getConfig().getInt("stopGrace.seconds", 3));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (parkour != null && lobbySpawn != null) {
-                for (Player p : parkour.getPlayers()) {
+                TeleportBatcher.preloadChunks(lobbySpawn, 5);
+                TeleportBatcher.teleportInBatches(plugin, parkour.getPlayers(), lobbySpawn, 4, 2, (p) -> {
                     p.setInvulnerable(false);
-                    p.teleport(lobbySpawn);
                     p.setGameMode(GameMode.SURVIVAL);
                     settingsUI.removeCompass(p);
-                }
-            }
-            if (parkour != null) {
+                }, () -> {
+                    eliminated.clear();
+                    finished.clear();
+                    ending = false;
+                    startMillis = 0L;
+                    updateAlive();
+                });
+            } else if (parkour != null) {
                 for (Player p : parkour.getPlayers()) {
                     p.setInvulnerable(false);
                 }
+                eliminated.clear();
+                finished.clear();
+                ending = false;
+                startMillis = 0L;
+                updateAlive();
             }
-            eliminated.clear();
-            finished.clear();
-            ending = false;
-            startMillis = 0L;
-            updateAlive();
         }, delay * 20L);
     }
 
